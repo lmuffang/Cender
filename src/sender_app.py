@@ -24,16 +24,18 @@ TEMPLATE_FILE = resource_path("template.txt")
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 def authenticate_gmail(credentails_path : str):
+    credentials_filename = os.path.basename(credentails_path)
+    token_filename = f"token-{credentials_filename}.json"
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if os.path.exists(token_filename):
+        creds = Credentials.from_authorized_user_file(token_filename, SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(credentails_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
+        with open(token_filename, "w") as token:
             token.write(creds.to_json())
     return build("gmail", "v1", credentials=creds)
 
