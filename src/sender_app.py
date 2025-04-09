@@ -1,5 +1,6 @@
 import os
 import base64
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import pandas as pd
@@ -13,8 +14,14 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 
+
+def resource_path(filename):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, filename)  # PyInstaller temp dir
+    return os.path.join(os.path.abspath("."), filename)
+
+TEMPLATE_FILE = resource_path("template.txt")
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
-TEMPLATE_FILE = "template.txt"
 
 def authenticate_gmail(credentails_path : str):
     creds = None

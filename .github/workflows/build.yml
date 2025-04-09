@@ -1,0 +1,34 @@
+name: Build Windows Executable
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build executable
+        run: |
+          cd src
+          pyinstaller --onefile --add-data "template.txt;." sender_app.py
+
+      - name: Upload .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: sender-app-exe
+          path: src/dist/sender_app.exe
