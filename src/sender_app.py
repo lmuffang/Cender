@@ -18,7 +18,7 @@ from google.oauth2.credentials import Credentials
 def resource_path(filename):
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, filename)  # PyInstaller temp dir
-    return os.path.join(os.path.abspath("."), filename)
+    return os.path.join(os.path.abspath( os.path.dirname( __file__ ) ), filename)
 
 TEMPLATE_FILE = resource_path("template.txt")
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
@@ -88,7 +88,7 @@ class App:
         self.gender_detector = self.init_gender_detector()
 
         tk.Label(root, text="Identifials Gmail :").grid(row=0, column=0, sticky="e")
-        tk.Entry(root, textvariable=self.resume_path, width=50).grid(row=0, column=1)
+        tk.Entry(root, textvariable=self.credentials_path, width=50).grid(row=0, column=1)
         tk.Button(root, text="Parcourir", command=self.browse_credentials).grid(row=0, column=2)
 
         tk.Label(root, text="CV (PDF) :").grid(row=1, column=0, sticky="e")
