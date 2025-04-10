@@ -73,6 +73,7 @@ def send_email(service, message, recipient):
         print(f"Email sent to {recipient}")
     except HttpError as error:
         print(f"Failed to send email to {recipient}: {error}")
+        raise error
 
 class App:
     def __init__(self, root):
@@ -104,11 +105,11 @@ class App:
         tk.Label(root, text="Sujet de l'e-mail :").grid(row=3, column=0, sticky="e")
         tk.Entry(root, textvariable=self.subject, width=50).grid(row=3, column=1, columnspan=2)
 
-        tk.Checkbutton(root, text="Dry run (n'envoie pas les emails, affiche seulement)", variable=self.dry_run).grid(row=4, column=1, sticky="w")
+        tk.Checkbutton(root, text="Simmuler les emails (n'envoie pas les emails, affiche seulement)", variable=self.dry_run).grid(row=4, column=1, sticky="w")
 
         tk.Label(root, text="Modèle d'e-mail :").grid(row=5, column=0, sticky="ne")
         self.template_box = scrolledtext.ScrolledText(root, width=60, height=15)
-        self.template_box.grid(row=4, column=1, columnspan=2)
+        self.template_box.grid(row=5, column=1, columnspan=2)
         self.template_box.insert(tk.END, load_template())
 
         tk.Button(root, text="Envoyer les e-mails", command=lambda: self.send_emails(self.credentials_path.get())).grid(row=6, column=1, pady=10)
@@ -177,12 +178,19 @@ class App:
             msg, body = create_message(email, salutation, company, template, resume, subject)
 
             if dry_run:
-                print(f"\nTO: {email}\nSUBJECT: {subject}\nBODY:\n{body}\n")
+                messagebox.showinfo(title=f"Email Généré", message=f"Email : {email}\n\nObjet : {subject}\n\n{body}")
             else:
-                send_email(service, msg, email)
-                pass
+                try:
+                    send_email(service, msg, email)
+                except Exception as e:
+                    messagebox.showerror(f"Erreure lors de l'envoi: {e}")
 
-        messagebox.showinfo("Terminé", "Traitement terminé. Emails envoyés (ou simulés).")
+        if dry_run:
+            messagebox.showinfo("Terminé", "Traitement terminé. Emails simulés.")
+        else:
+            messagebox.showinfo("Terminé", "Traitement terminé. Emails envoyés.")
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
