@@ -22,13 +22,16 @@ jobs:
           pip install pyinstaller
           pip install -r requirements.txt
 
-      - name: Build executable
+      - name: Build executable with PyInstaller
+        shell: pwsh
         run: |
-          cd src
-          pyinstaller --onefile --add-data "template.txt;." sender_app.py
+          $genderPath = python -c "import gender_guesser, os; print(os.path.join(os.path.dirname(gender_guesser.__file__), 'data', 'nam_dict.txt'))"
+          pyinstaller src\sender_app.py --onefile `
+          --add-data "$genderPath;gender_guesser\data"
+
 
       - name: Upload .exe
         uses: actions/upload-artifact@v4
         with:
           name: sender-app-exe
-          path: src/dist/sender_app.exe
+          path: dist/sender_app.exe
