@@ -20,12 +20,23 @@ def resource_path(filename):
         return os.path.join(sys._MEIPASS, filename)  # PyInstaller temp dir
     return os.path.join(os.path.abspath( os.path.dirname( __file__ ) ), filename)
 
-TEMPLATE_FILE = resource_path("template.txt")
+TEMPLATE_FILE = "template.txt"
+HISTORY_FILE = "mail_sent.csv"
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
+def load_sent_log():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            return set(line.strip() for line in f if line.strip())
+    return set()
+
+def save_to_sent_log(email):
+    with open(HISTORY_FILE, "a", encoding="utf-8") as f:
+        f.write(email + "\n")
+
 def authenticate_gmail(credentails_path : str):
-    credentials_filename = os.path.basename(credentails_path)
-    token_filename = f"token-{credentials_filename}.json"
+    credentials_name = os.path.splitext(os.path.basename(credentails_path))[0]
+    token_filename = f"token-{credentials_name}.json"
     creds = None
     if os.path.exists(token_filename):
         creds = Credentials.from_authorized_user_file(token_filename, SCOPES)
@@ -156,6 +167,7 @@ class App:
         subject = self.subject.get()
         template = self.template_box.get("1.0", tk.END)
         dry_run = self.dry_run.get()
+        
 
         if not all([resume, csv_file, subject.strip(), template.strip()]):
             messagebox.showerror("Informations manquantes", "Veuillez remplir tous les champs.")
@@ -165,6 +177,7 @@ class App:
         df = pd.read_csv(csv_file, dtype=str)
         service = authenticate_gmail(credentails_path=credentails_path) if not dry_run else None
 
+        sent_emails = load_sent_log()
         for _, row in df.iterrows():
             email = row.get("Email", "").strip()
             first_name = row.get("First Name", "").strip()
@@ -173,6 +186,10 @@ class App:
 
             if not email:
                 continue
+            if email in sent_emails:
+                print(f"Skipping {email} (already sent)")
+                continue
+
 
             salutation = f"{self.guess_salutation(first_name)} {last_name}".strip()
             msg, body = create_message(email, salutation, company, template, resume, subject)
@@ -182,6 +199,7 @@ class App:
             else:
                 try:
                     send_email(service, msg, email)
+                    save_to_sent_log(email)
                 except Exception as e:
                     messagebox.showerror(f"Erreure lors de l'envoi: {e}")
 
