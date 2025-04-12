@@ -140,6 +140,23 @@ class App:
             command=lambda: self.send_emails(self.credentials_path.get()),
         ).grid(row=6, column=1, pady=10)
 
+        self.log_frame = tk.Frame(root)
+        self.log_frame.grid(row=7, column=0, columnspan=3, pady=(0, 10), sticky="nsew")
+
+        self.log_box = scrolledtext.ScrolledText(
+            self.log_frame,
+            width=100,
+            height=12,
+            wrap='none',
+            state='disabled',
+            font=("Courier", 10)
+        )
+        self.log_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        x_scrollbar = tk.Scrollbar(self.log_frame, orient='horizontal', command=self.log_box.xview)
+        x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.log_box.config(xscrollcommand=x_scrollbar.set)
+
     def init_gender_detector(self):
         try:
             import gender_guesser.detector as gender
@@ -176,6 +193,12 @@ class App:
         self.root.after(100, self.root.focus_force)  # Delayed focus
         if file:
             self.csv_path.set(file)
+
+    def log(self, message):
+        self.log_box.config(state='normal')
+        self.log_box.insert(tk.END, message + '\n')
+        self.log_box.see(tk.END)
+        self.log_box.config(state='disabled')
 
     def send_emails(self, credentails_path):
         resume = self.resume_path.get()
@@ -214,19 +237,17 @@ class App:
                     messagebox.showinfo(
                         title=f"Email Généré", message=f"Email : {email}\n\nObjet : {subject}\n\n{body}"
                     )
+                    self.log(f"[INFO] Faux envoi réussi pour {row.get('Email', 'N/A')}")
                 else:
                     try:
                         send_email(service, msg, email)
                         save_to_sent_log(email, history_filename)
                         sent_emails.add(email)
+                        self.log(f"[INFO] Envoi réussi pour {row.get('Email', 'N/A')}")
                     except Exception as e:
                         messagebox.showerror("Erreure", f"Erreure lors de l'envoi: {e}")
             except Exception as e:
-                messagebox.showwarning(
-                        "Erreur",
-                        f"Une erreur s'est produite lors de l'envoi de l'e-mail pour :\n\n{row}\n\nDétail de l'erreur :\n{e}"
-                    )
-
+                self.log(f"[ERREUR] Envoi échoué pour {row.get('Email', 'N/A')}: {e}")
 
         if dry_run:
             messagebox.showinfo("Terminé", "Traitement terminé. Emails simulés.")
