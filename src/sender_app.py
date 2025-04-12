@@ -217,6 +217,7 @@ class App:
 
         history_filename = get_history_filename(credentails_path=credentails_path)
         sent_emails = load_sent_log(history_filename)
+        nb_mails_sent=0
         for _, row in df.iterrows():
             try:
                 email = row.get("Email", "").strip()
@@ -244,6 +245,7 @@ class App:
                         save_to_sent_log(email, history_filename)
                         sent_emails.add(email)
                         self.log(f"[INFO] Envoi réussi pour {row.get('Email', 'N/A')}")
+                        nb_mails_sent+=1
                     except Exception as e:
                         messagebox.showerror("Erreure", f"Erreure lors de l'envoi: {e}")
             except Exception as e:
@@ -252,7 +254,7 @@ class App:
         if dry_run:
             messagebox.showinfo("Terminé", "Traitement terminé. Emails simulés.")
         else:
-            messagebox.showinfo("Terminé", "Traitement terminé. Emails envoyés.")
+            messagebox.showinfo("Terminé", f"Traitement terminé. {nb_mails_sent} emails envoyés.")
 
 
 
