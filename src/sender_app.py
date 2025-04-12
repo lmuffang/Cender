@@ -195,36 +195,44 @@ class App:
         history_filename = get_history_filename(credentails_path=credentails_path)
         sent_emails = load_sent_log(history_filename)
         for _, row in df.iterrows():
-            email = row.get("Email", "").strip()
-            first_name = row.get("First Name", "").strip()
-            last_name = row.get("Last Name", "").strip()
-            company = row.get("Company", row.get("Company Name for Emails", "")).strip()
+            try:
+                email = row.get("Email", "").strip()
+                first_name = row.get("First Name", "").strip()
+                last_name = row.get("Last Name", "").strip()
+                company = row.get("Company", row.get("Company Name for Emails", "")).strip()
 
-            if not email:
-                continue
-            if email in sent_emails:
-                print(f"Skipping {email} (already sent)")
-                continue
+                if not email:
+                    continue
+                if email in sent_emails:
+                    print(f"Skipping {email} (already sent)")
+                    continue
 
-            salutation = f"{self.guess_salutation(first_name)} {last_name}".strip()
-            msg, body = create_message(email, salutation, company, template, resume, subject)
+                salutation = f"{self.guess_salutation(first_name)} {last_name}".strip()
+                msg, body = create_message(email, salutation, company, template, resume, subject)
 
-            if dry_run:
-                messagebox.showinfo(
-                    title=f"Email Généré", message=f"Email : {email}\n\nObjet : {subject}\n\n{body}"
-                )
-            else:
-                try:
-                    send_email(service, msg, email)
-                    save_to_sent_log(email, history_filename)
-                    sent_emails.add(email)
-                except Exception as e:
-                    messagebox.showerror(f"Erreure lors de l'envoi: {e}")
+                if dry_run:
+                    messagebox.showinfo(
+                        title=f"Email Généré", message=f"Email : {email}\n\nObjet : {subject}\n\n{body}"
+                    )
+                else:
+                    try:
+                        send_email(service, msg, email)
+                        save_to_sent_log(email, history_filename)
+                        sent_emails.add(email)
+                    except Exception as e:
+                        messagebox.showerror("Erreure", f"Erreure lors de l'envoi: {e}")
+            except Exception as e:
+                messagebox.showwarning(
+                        "Erreur",
+                        f"Une erreur s'est produite lors de l'envoi de l'e-mail pour :\n\n{row}\n\nDétail de l'erreur :\n{e}"
+                    )
+
 
         if dry_run:
             messagebox.showinfo("Terminé", "Traitement terminé. Emails simulés.")
         else:
             messagebox.showinfo("Terminé", "Traitement terminé. Emails envoyés.")
+
 
 
 if __name__ == "__main__":
