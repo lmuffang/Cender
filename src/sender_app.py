@@ -53,14 +53,20 @@ def authenticate_gmail(credentails_path: str):
 
 def load_template():
     if os.path.exists(TEMPLATE_FILE):
-        with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
-            return f.read()
+        try:
+            with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+                return f.read()
+        except:
+            pass
     return "Bonjour {salutation},\n\nJe me permets de vous contacter concernant une opportunité au sein de {company}. Vous trouverez ci-joint mon CV.\n\nCordialement,\nVotre Nom"
 
 
 def save_template(content):
-    with open(TEMPLATE_FILE, "w", encoding="utf-8") as f:
-        f.write(content)
+    try:
+        with open(TEMPLATE_FILE, "w", encoding="utf-8") as f:
+            f.write(content)
+    except:
+        pass
 
 
 def create_message(to_email, salutation, company, template, resume_path, subject):
