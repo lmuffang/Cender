@@ -416,93 +416,90 @@ with tab1:
         
         st.divider()
         
-        # Send options
-        col1, col2 = st.columns(2)
+        dry_run = st.checkbox("🧪 Dry Run (Don't actually send)", value=False, key="dry_run")
+
+        st.divider() 
         
-        with col1:
-            dry_run = st.checkbox("🧪 Dry Run (Don't actually send)", value=False, key="dry_run")
-        
-        with col2:
-            if st.button("📧 Send Emails", type="primary", use_container_width=True):
-                if not subject:
-                    st.error("Please enter an email subject")
-                elif not template_content:
-                    st.error("Please enter an email template")
+        if st.button("📧 Send Emails", type="primary", use_container_width=True):
+            if not subject:
+                st.error("Please enter an email subject")
+            elif not template_content:
+                st.error("Please enter an email template")
+            else:
+                # Save template first
+                if not save_template(user_id, template_content):
+                    st.error("Failed to save template. Please try again.")
+                    st.stop()
+                
+                # Determine which recipients to send to
+                if selected_indices:
+                    recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices]
                 else:
-                    # Save template first
-                    if not save_template(user_id, template_content):
-                        st.error("Failed to save template. Please try again.")
-                        st.stop()
+                    # Send to all unused recipients
+                    unused_recipients = fetch_recipients(user_id, used=False)
+                    recipient_ids = [r["id"] for r in unused_recipients]
+                
+                if not recipient_ids:
+                    st.warning("No recipients selected or no unused recipients available.")
+                    st.stop()
+                
+                with st.spinner("Sending emails..."):
+                    status_box = st.empty()
+                    progress = st.progress(0)
+                    log_box = st.container()
+                    sent = 0
+                    failed = 0
+                    skipped = 0
+                    total = len(recipient_ids)
+                    errors = []
                     
-                    # Determine which recipients to send to
-                    if selected_indices:
-                        recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices]
+                    for i, event in enumerate(send_emails_stream(user_id, recipient_ids, subject, dry_run)):
+                        if "error" in event:
+                            st.error(f"Error: {event['error']}")
+                            break
+                        
+                        # Update UI incrementally
+                        with log_box:
+                            status_text = f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+                            if event.get('message'):
+                                status_text += f" ({event.get('message')})"
+                            st.text(status_text)
+
+                        status_box.info(
+                            f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+                        )
+
+                        status = event.get("status", "")
+                        if status == "sent":
+                            sent += 1
+                        elif status == "failed":
+                            failed += 1
+                            errors.append({
+                                "email": event.get("email", "N/A"),
+                                "message": event.get("message", "Unknown error")
+                            })
+                        elif status == "skipped":
+                            skipped += 1
+                        
+                        if total > 0:
+                            progress.progress((i + 1) / total)
+                    
+                    # Display results
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("✅ Sent", sent)
+                    col2.metric("❌ Failed", failed)
+                    col3.metric("⏭️ Skipped", skipped)
+                    
+                    if errors:
+                        with st.expander("Failed emails details"):
+                            for err in errors:
+                                st.write(f"- {err['email']}: {err['message']}")
+                    
+                    if dry_run:
+                        st.info("Dry run completed - no emails were actually sent")
                     else:
-                        # Send to all unused recipients
-                        unused_recipients = fetch_recipients(user_id, used=False)
-                        recipient_ids = [r["id"] for r in unused_recipients]
-                    
-                    if not recipient_ids:
-                        st.warning("No recipients selected or no unused recipients available.")
-                        st.stop()
-                    
-                    with st.spinner("Sending emails..."):
-                        status_box = st.empty()
-                        log_box = st.container()
-                        progress = st.progress(0)
-                        sent = 0
-                        failed = 0
-                        skipped = 0
-                        total = len(recipient_ids)
-                        errors = []
-                        
-                        for i, event in enumerate(send_emails_stream(user_id, recipient_ids, subject, dry_run)):
-                            if "error" in event:
-                                st.error(f"Error: {event['error']}")
-                                break
-                            
-                            # Update UI incrementally
-                            with log_box:
-                                status_text = f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-                                if event.get('message'):
-                                    status_text += f" ({event.get('message')})"
-                                st.text(status_text)
-
-                            status_box.info(
-                                f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-                            )
-
-                            status = event.get("status", "")
-                            if status == "sent":
-                                sent += 1
-                            elif status == "failed":
-                                failed += 1
-                                errors.append({
-                                    "email": event.get("email", "N/A"),
-                                    "message": event.get("message", "Unknown error")
-                                })
-                            elif status == "skipped":
-                                skipped += 1
-                            
-                            if total > 0:
-                                progress.progress((i + 1) / total)
-                        
-                        # Display results
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("✅ Sent", sent)
-                        col2.metric("❌ Failed", failed)
-                        col3.metric("⏭️ Skipped", skipped)
-                        
-                        if errors:
-                            with st.expander("Failed emails details"):
-                                for err in errors:
-                                    st.write(f"- {err['email']}: {err['message']}")
-                        
-                        if dry_run:
-                            st.info("Dry run completed - no emails were actually sent")
-                        else:
-                            st.success("Email sending completed!")
-                            st.rerun()
+                        st.success("Email sending completed!")
+                        st.rerun()
 
 with tab2:
     st.header("Configuration")

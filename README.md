@@ -285,6 +285,8 @@ For issues or questions:
 - [ ] **Data Export/Import**: Export email logs and user data to CSV for backup/restore
 - [ ] **Database Migrations**: Add Alembic for proper schema versioning and migrations
 - [ ] **Custom Template Variables**: Allow users to define custom CSV fields for template placeholders
+- [ ] **Frontend usage**: block all actions when sending emails
+- [ ] **Template enhancement**: Store email subject in it.
 
 ### 🔮 Future Enhancements
 - [ ] **AI-Generated Emails**: Generate personalized emails based on company data (requires OpenAI API or local LLM)

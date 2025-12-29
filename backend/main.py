@@ -294,16 +294,16 @@ async def import_recipients_csv(
         linked = 0
 
         for _, row in df.iterrows():
-            email = (row.get("Email") or "").strip().lower()
-            if not email:
-                continue
-
-            first_name = (row.get("First Name") or "").strip()
-            last_name = (row.get("Last Name") or "").strip()
-            company = row.get("Company", "")
-            if isinstance(company, float):  # can be NaN if empty
-                company = ""
-            company = company.strip()
+            email = row.get("Email", "")
+            if not isinstance(email, str) or not email:
+                continue # is empty, NaN
+            email = email.strip()
+            recipient_data = {"First Name": "", "Last Name": "", "Company": ""}
+            for key in recipient_data.keys():
+                value = row.get(key)
+                if not isinstance(value, str) or not value:
+                    value = "" # is empty, NaN
+                recipient_data[key] = value.strip()
 
             # Find existing recipient
             recipient = db.query(Recipient).filter(Recipient.email == email).one_or_none()
@@ -311,15 +311,11 @@ async def import_recipients_csv(
             if recipient:
                 # Merge missing info only
                 changed = False
-                if first_name and not recipient.first_name:
-                    recipient.first_name = first_name
-                    changed = True
-                if last_name and not recipient.last_name:
-                    recipient.last_name = last_name
-                    changed = True
-                if company and not recipient.company:
-                    recipient.company = company
-                    changed = True
+                keys_attribute_map = {"First Name": "first_name", "Last Name": "last_name", "Company": "company"}
+                for key, attribute in keys_attribute_map.items():
+                    if recipient_data.get(key) and not getattr(recipient, attribute):
+                        setattr(recipient, attribute, recipient_data.get(key))
+                        changed = True
                 if changed:
                     updated += 1
             else:
@@ -327,9 +323,9 @@ async def import_recipients_csv(
                 try:
                     recipient = recipient_service.create(
                         email=email,
-                        first_name=first_name or None,
-                        last_name=last_name or None,
-                        company=company or None,
+                        first_name=recipient_data["First Name"] or None,
+                        last_name=recipient_data["Last Name"] or None,
+                        company=recipient_data["Company"] or None,
                     )
                     created += 1
                 except ValueError:

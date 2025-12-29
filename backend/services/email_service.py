@@ -2,6 +2,7 @@
 import json
 import os
 import datetime
+import time
 from sqlalchemy.orm import Session
 
 from database import EmailLog, EmailStatus, Recipient
@@ -38,7 +39,7 @@ class EmailService:
             user_id: User ID
             recipient_ids: List of recipient IDs
             subject: Email subject
-            dry_run: If True, don't actually send emails
+            dry_run: If True, don't actually send emails, pause for 0.1sec
             
         Yields:
             JSON strings with status updates
@@ -142,6 +143,7 @@ class EmailService:
                 
                 if dry_run:
                     logger.debug(f"Dry run: Preview email for {email}")
+                    time.sleep(0.1) # to simulate sent
                     yield json.dumps({
                         "recipient_id": recipient_id,
                         "email": email,
