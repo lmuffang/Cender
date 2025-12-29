@@ -232,6 +232,34 @@ To modify the code:
 
 MIT License - Feel free to modify and use as needed.
 
+## Testing
+
+### Running Tests
+
+Tests are run using pytest in Docker:
+
+```bash
+# On Mac/Linux
+./run_tests.sh
+
+# With specific options
+./run_tests.sh -v --tb=short
+```
+
+Tests are also automatically run on push/PR via GitHub Actions (see `.github/workflows/test.yml`).
+
+### Test Coverage
+
+The test suite covers:
+- User CRUD operations
+- Template management
+- Recipient management and CSV import
+- Email operations (preview, sending, logs)
+- File uploads (credentials, resume)
+- Email log deletion/reset
+
+See `backend/tests/README.md` for more details.
+
 ## Support
 
 For issues or questions:
@@ -239,15 +267,43 @@ For issues or questions:
 2. Review Docker logs: `docker-compose logs`
 3. Check individual service logs: `docker-compose logs backend` or `docker-compose logs frontend`
 
+## Roadmap
 
+### ✅ Completed
+- [x] Multi-user support with isolated data
+- [x] Template management per user
+- [x] CSV import for recipients
+- [x] Email tracking and logging
+- [x] Email log visualization
+- [x] Reset/delete email logs functionality
+- [x] Backend API refactoring and organization
+- [x] Comprehensive test suite
+- [x] Docker-based testing infrastructure
 
-TODO:
-- make one template per user, create an update route for it DONE
-- fix csv parsing: can be too heavy, write it to db? each entry being a line in a table, if email exist, ignore or merge infos. Then a EmailLog can be linked to the Recipient id table, not email adress direclty
-- add specific selection of recipiants? not only not "used" ones?
-- add expost history log and import history log (allows for some backwards compatibility via simple csv data.) Best would be to export all user data
-- add migration with alembic for proper import/export of data?
-- being able to delete emails logs (all or apecific, by date for example). Need ot be able to visualize emails logs first of course
-- refactor app.py and main.py, too much happening 
-- user selected feilds for template keywords for custom made csv 
-- AI generated emails, depeding on csv data (company type, size, etc...). Would need OpenAI key or local LMM (ollama but not very good as cloud providers)
+### 🚧 In Progress / Short-term
+- [ ] **Recipient Selection Enhancement**: Allow selecting specific recipients (not just unused ones) - Partially done
+- [ ] **Data Export/Import**: Export email logs and user data to CSV for backup/restore
+- [ ] **Database Migrations**: Add Alembic for proper schema versioning and migrations
+- [ ] **Custom Template Variables**: Allow users to define custom CSV fields for template placeholders
+
+### 🔮 Future Enhancements
+- [ ] **AI-Generated Emails**: Generate personalized emails based on company data (requires OpenAI API or local LLM)
+- [ ] **Email Scheduling**: Schedule emails to be sent at specific times
+- [ ] **Email Templates Library**: Pre-built templates for different use cases
+- [ ] **Analytics Dashboard**: Advanced statistics and email performance metrics
+- [ ] **Bulk Operations**: Bulk delete, update, or tag recipients
+- [ ] **Email Attachments**: Support for multiple attachments beyond resume
+- [ ] **Multi-language Support**: Support for different languages and salutations
+- [ ] **API Authentication**: Add proper authentication/authorization for API endpoints
+- [ ] **Webhook Support**: Webhooks for email events (sent, failed, etc.)
+- [ ] **Email Bounce Handling**: Detect and handle bounced emails
+
+### 🏗️ Technical Improvements
+- [ ] **Code Refactoring**: Further modularization and separation of concerns (see `REFACTORING_GUIDE.md`)
+- [ ] **Performance Optimization**: Optimize CSV parsing for large files
+- [ ] **Error Handling**: More comprehensive error handling and user feedback
+- [ ] **Logging**: Structured logging with proper log levels
+- [ ] **Configuration Management**: Environment-based configuration
+- [ ] **API Documentation**: Enhanced OpenAPI/Swagger documentation
+- [ ] **Frontend State Management**: Better state management in Streamlit app
+- [ ] **Database Optimization**: Index optimization and query performance tuning
