@@ -19,10 +19,12 @@ from services.recipient_service import RecipientService
 from services.email_service import EmailService
 from utils.gender_detector import guess_salutation
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+@app.on_event("startup")
+def on_startup():
+    # Create tables
+    Base.metadata.create_all(bind=engine)
 
 # CORS
 app.add_middleware(
