@@ -26,3 +26,18 @@ services:
     depends_on:
       - backend
     command: streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+
+  pytest:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - ./credentials:/app/credentials
+    environment:
+      - DATABASE_URL=sqlite:///./data/test.db
+      - PYTHONUNBUFFERED=1
+    command: pytest tests/ -v --tb=short
+    profiles:
+      - testing

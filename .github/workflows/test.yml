@@ -1,0 +1,27 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Run tests
+      run: |
+        docker-compose --profile testing run --rm pytest tests/ -v --tb=short
+
+    - name: Test summary
+      if: always()
+      run: |
+        echo "Tests completed. Check logs above for details."
+
