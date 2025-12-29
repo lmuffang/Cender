@@ -1,14 +1,12 @@
 import os
 import json
 import datetime
-from typing import List, Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 import pandas as pd
 from sqlalchemy.orm import Session
-from sqlalchemy import exists
 
 from database import engine, SessionLocal, Base, User, EmailLog, Template, EmailStatus, Recipient, user_recipients
 from gmail_service import authenticate_gmail, create_message, send_email
@@ -55,17 +53,17 @@ class UserResponse(BaseModel):
 
 class RecipientCreate(BaseModel):
     email: EmailStr
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    company: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    company: str | None = None
 
 class RecipientResponse(BaseModel):
     id: int
     email: str
-    first_name: Optional[str]
-    last_name: Optional[str]
-    salutation: Optional[str]
-    company: Optional[str]
+    first_name: str | None
+    last_name: str | None
+    salutation: str | None
+    company: str | None
 
     class Config:
         orm_mode = True
@@ -91,24 +89,24 @@ class EmailPreview(BaseModel):
 class EmailLogResponse(BaseModel):
     id: int
     user_id: int
-    recipient_id: Optional[int]
+    recipient_id: int | None
     recipient_email: str
     subject: str
     status: str
     sent_at: datetime.datetime
-    error_message: Optional[str]
+    error_message: str | None
 
     class Config:
         orm_mode = True
 
 class SendEmailsRequest(BaseModel):
-    recipient_ids: List[int]
+    recipient_ids: list[int]
     subject: str
     dry_run: bool = False
 
 
 # Helper functions
-def guess_salutation(first_name: Optional[str]) -> str:
+def guess_salutation(first_name: str | None) -> str:
     """Guess salutation based on first name"""
     if not first_name:
         return "Monsieur"
@@ -138,7 +136,7 @@ def get_resume_path(user_id: int) -> str:
 def send_emails_stream(
     *,
     user_id: int,
-    recipient_ids: List[int],
+    recipient_ids: list[int],
     subject: str,
     template: str,
     dry_run: bool,
@@ -302,7 +300,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@app.get("/users/", response_model=List[UserResponse])
+@app.get("/users/", response_model=list[UserResponse])
 async def list_users(db: Session = Depends(get_db)):
     """List all users"""
     return db.query(User).all()
@@ -439,10 +437,10 @@ async def get_recipient(recipient_id: int, db: Session = Depends(get_db)):
     return recipient
 
 
-@app.get("/users/{user_id}/recipients", response_model=List[RecipientResponse])
+@app.get("/users/{user_id}/recipients", response_model=list[RecipientResponse])
 async def list_recipients(
     user_id: int,
-    used: Optional[bool] = Query(None, description="Filter by usage status"),
+    used: bool | None = Query(None, description="Filter by usage status"),
     db: Session = Depends(get_db),
 ):
     """List recipients for a user, optionally filtered by usage"""
@@ -504,11 +502,10 @@ async def import_recipients_csv(
 
             first_name = (row.get("First Name") or "").strip()
             last_name = (row.get("Last Name") or "").strip()
-            company = (
-                row.get("Company")
-                or row.get("Company Name for Emails")
-                or ""
-            ).strip()
+            company = row.get("Company", "")
+            if isinstance(company, float): # can be NaN if empty
+                company = ""
+            company = company.strip()
 
             # Find existing recipient
             recipient = (
@@ -558,10 +555,11 @@ async def import_recipients_csv(
         }
 
     except Exception as e:
+        import traceback
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail=f"Error parsing CSV: {str(e)}",
+            detail=f"Error parsing CSV: {str(e)}: {traceback.format_exc()}",
         )
 
 
@@ -644,11 +642,11 @@ async def send_emails_endpoint(
 # ============================================================================
 # EMAIL LOGS
 # ============================================================================
-@app.get("/users/{user_id}/email-logs", response_model=List[EmailLogResponse])
+@app.get("/users/{user_id}/email-logs", response_model=list[EmailLogResponse])
 async def get_email_logs(
     user_id: int,
     limit: int = Query(100, ge=1, le=10000),
-    status: Optional[EmailStatus] = Query(None),
+    status: EmailStatus | None = Query(None),
     db: Session = Depends(get_db),
 ):
     """Get email sending history for a user"""
@@ -693,3 +691,73 @@ async def get_user_stats(user_id: int, db: Session = Depends(get_db)):
         "total_skipped": total_skipped,
         "total_emails": total_sent + total_failed + total_skipped
     }
+
+
+@app.delete("/users/{user_id}/email-logs")
+async def delete_email_logs(
+    user_id: int,
+    recipient_id: int | None = Query(None, description="Delete logs for specific recipient"),
+    status: EmailStatus | None = Query(None, description="Delete logs with specific status"),
+    before_date: str | None = Query(None, description="Delete logs before this date (YYYY-MM-DD)"),
+    all: bool = Query(False, description="Delete all logs for user"),
+    db: Session = Depends(get_db),
+):
+    """Delete email logs for a user. Allows filtering by recipient, status, or date."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not all and not recipient_id and not status and not before_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Must specify at least one filter (recipient_id, status, before_date) or set all=true"
+        )
+    
+    query = db.query(EmailLog).filter(EmailLog.user_id == user_id)
+    
+    if recipient_id:
+        query = query.filter(EmailLog.recipient_id == recipient_id)
+    
+    if status:
+        query = query.filter(EmailLog.status == status)
+    
+    if before_date:
+        try:
+            date_obj = datetime.datetime.strptime(before_date, "%Y-%m-%d").replace(tzinfo=datetime.timezone.utc)
+            query = query.filter(EmailLog.sent_at < date_obj)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    logs_to_delete = query.all()
+    count = len(logs_to_delete)
+    
+    for log in logs_to_delete:
+        db.delete(log)
+    
+    db.commit()
+    
+    return {
+        "message": f"Deleted {count} email log(s)",
+        "deleted_count": count
+    }
+
+
+@app.delete("/users/{user_id}/email-logs/{log_id}")
+async def delete_email_log(user_id: int, log_id: int, db: Session = Depends(get_db)):
+    """Delete a specific email log"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    log = db.query(EmailLog).filter(
+        EmailLog.id == log_id,
+        EmailLog.user_id == user_id
+    ).first()
+    
+    if not log:
+        raise HTTPException(status_code=404, detail="Email log not found")
+    
+    db.delete(log)
+    db.commit()
+    
+    return {"message": "Email log deleted successfully"}

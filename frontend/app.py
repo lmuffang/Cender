@@ -199,6 +199,45 @@ def get_email_logs(user_id, limit=100):
     return []
 
 
+def delete_email_logs(user_id, recipient_id=None, status=None, before_date=None, all_logs=False):
+    """Delete email logs for a user"""
+    try:
+        params = {}
+        if all_logs:
+            params["all"] = "true"
+        if recipient_id:
+            params["recipient_id"] = str(recipient_id)
+        if status:
+            params["status"] = str(status)  # Convert to string for query param
+        if before_date:
+            if hasattr(before_date, 'strftime'):
+                params["before_date"] = before_date.strftime("%Y-%m-%d")
+            else:
+                params["before_date"] = str(before_date)
+        
+        response = requests.delete(
+            f"{BACKEND_URL}/users/{user_id}/email-logs",
+            params=params
+        )
+        if response.status_code == 200:
+            return True, response.json()
+        else:
+            return False, response.json().get("detail", "Failed to delete logs")
+    except Exception as e:
+        return False, str(e)
+
+
+def delete_email_log(user_id, log_id):
+    """Delete a specific email log"""
+    try:
+        response = requests.delete(
+            f"{BACKEND_URL}/users/{user_id}/email-logs/{log_id}"
+        )
+        return response.status_code == 200
+    except:
+        return False
+
+
 # Main UI
 st.title("📧 CV Email Sender")
 
@@ -503,6 +542,68 @@ with tab3:
     
     st.divider()
     
+    # Reset/Delete email logs section
+    with st.expander("🔄 Reset Sent Emails", expanded=False):
+        st.warning("⚠️ Resetting sent emails will allow you to re-send emails to those recipients.")
+        st.info("💡 This deletes the email logs. You can filter by recipient, status, or date.")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            reset_option = st.radio(
+                "Reset options",
+                options=["All sent emails", "By recipient", "By status", "Before date"],
+                key="reset_option"
+            )
+        
+        with col2:
+            if reset_option == "By recipient":
+                recipients = fetch_recipients(user_id)
+                recipient_options = {f"{r.get('email', 'N/A')}": r["id"] for r in recipients}
+                selected_recipient = st.selectbox(
+                    "Select recipient",
+                    options=list(recipient_options.keys()),
+                    key="reset_recipient"
+                )
+                reset_recipient_id = recipient_options[selected_recipient] if selected_recipient else None
+            elif reset_option == "By status":
+                reset_status = st.selectbox(
+                    "Select status",
+                    options=["sent", "failed", "skipped"],
+                    key="reset_status"
+                )
+            elif reset_option == "Before date":
+                reset_date = st.date_input(
+                    "Delete logs before this date",
+                    key="reset_date"
+                )
+        
+        if st.button("🗑️ Delete Email Logs", type="primary"):
+            try:
+                if reset_option == "All sent emails":
+                    success, result = delete_email_logs(user_id, status="sent")
+                elif reset_option == "By recipient":
+                    if not selected_recipient:
+                        st.error("Please select a recipient")
+                        st.stop()
+                    success, result = delete_email_logs(user_id, recipient_id=reset_recipient_id)
+                elif reset_option == "By status":
+                    success, result = delete_email_logs(user_id, status=reset_status)
+                elif reset_option == "Before date":
+                    success, result = delete_email_logs(user_id, before_date=reset_date)
+                else:
+                    success, result = False, "Invalid option"
+            except Exception as e:
+                success, result = False, str(e)
+            
+            if success:
+                st.success(f"✅ {result.get('message', 'Email logs deleted successfully')}")
+                st.rerun()
+            else:
+                st.error(f"❌ Failed to delete logs: {result}")
+    
+    st.divider()
+    
     # Email logs
     limit = st.slider("Number of logs to display", min_value=10, max_value=500, value=100, step=10)
     logs = get_email_logs(user_id, limit)
@@ -513,10 +614,28 @@ with tab3:
         if "sent_at" in logs_df.columns:
             logs_df["sent_at"] = pd.to_datetime(logs_df["sent_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
         
+        # Add delete button for each log
         st.dataframe(
-            logs_df[["email", "subject", "status", "sent_at", "error_message"]],
+            logs_df[["id", "email", "subject", "status", "sent_at", "error_message"]],
             use_container_width=True
         )
+        
+        # Delete individual log
+        st.subheader("Delete Individual Log")
+        log_ids = [log["id"] for log in logs]
+        selected_log_id = st.selectbox(
+            "Select log to delete",
+            options=log_ids,
+            format_func=lambda x: f"Log #{x}",
+            key="delete_log_select"
+        )
+        
+        if st.button("🗑️ Delete Selected Log", key="delete_single_log"):
+            if delete_email_log(user_id, selected_log_id):
+                st.success("✅ Email log deleted successfully!")
+                st.rerun()
+            else:
+                st.error("❌ Failed to delete email log")
     else:
         st.info("No email logs found")
 

@@ -2,17 +2,15 @@ import enum
 import os
 import functools
 from datetime import datetime, timezone
-from typing import List, Optional
-
 from sqlalchemy import (
     create_engine,
-    String,
-    DateTime,
     Table,
+    Column,
     Enum,
     Text,
     ForeignKey,
-    UniqueConstraint,
+    Integer,
+    DateTime,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -21,6 +19,7 @@ from sqlalchemy.orm import (
     relationship,
     sessionmaker,
 )
+
 
 
 # Database setup
@@ -46,17 +45,19 @@ class EmailStatus(str, enum.Enum):
     FAILED = "failed"
     SKIPPED = "skipped"
 
-# Association Table fro Many to many User <> Recipient
+# Association Table for Many to many User <> Recipient
 user_recipients = Table(
     "user_recipients",
     Base.metadata,
-    mapped_column(
+    Column(
         "user_id",
+        Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
     ),
-    mapped_column(
+    Column(
         "recipient_id",
+        Integer,
         ForeignKey("recipients.id", ondelete="CASCADE"),
         primary_key=True,
     ),
