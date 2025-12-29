@@ -16,8 +16,8 @@ st.set_page_config(
 # Initialize session state
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
-if "recipients" not in st.session_state:
-    st.session_state.recipients = []
+if "user_created" not in st.session_state:
+    st.session_state.user_created = False
 
 
 def load_users():
@@ -26,8 +26,8 @@ def load_users():
         response = requests.get(f"{BACKEND_URL}/users/")
         if response.status_code == 200:
             return response.json()
-    except:
-        pass
+    except Exception as e:
+        st.error(f"Error loading users: {e}")
     return []
 
 
@@ -38,9 +38,12 @@ def create_user(username, email):
             f"{BACKEND_URL}/users/",
             json={"username": username, "email": email}
         )
-        return response.status_code == 200
-    except:
-        return False
+        if response.status_code == 200:
+            return True, None
+        else:
+            return False, response.json().get("detail", "Failed to create user")
+    except Exception as e:
+        return False, str(e)
 
 
 def upload_credentials(user_id, file):
@@ -85,64 +88,90 @@ def save_template(user_id, content):
     try:
         response = requests.post(
             f"{BACKEND_URL}/users/{user_id}/template",
-            data={"content": content}
+            json={"content": content}
         )
-        return response.status_code == 200
+        return response.status_code in [200, 201]
     except:
         return False
 
 
-def parse_csv(user_id, file):
+def upload_recipients_csv(user_id, file):
     """Parse CSV and extract recipients"""
     try:
         files = {"file": file}
         response = requests.post(
-            f"{BACKEND_URL}/users/{user_id}/parse-csv",
+            f"{BACKEND_URL}/users/{user_id}/recipients-csv",
             files=files
         )
         if response.status_code == 200:
-            return response.json()["recipients"]
-    except Exception as e:
-        st.error(f"Error parsing CSV: {e}")
-    return []
-
-def send_emails_stream(user_id, subject, template, recipients, dry_run=False):
-    payload = {
-                "user_id": user_id,
-                "subject": subject,
-                "template": template,
-                "recipients_json": json.dumps(recipients),
-                "dry_run": dry_run
-            }
-    
-    with requests.post(f"{BACKEND_URL}/send-emails/stream", data=payload, stream=True) as response:
-        if response.status_code != 200:
-            st.error("Failed to start email sending")
+            response_payload = response.json()
+            return True, response_payload
         else:
-            for line in response.iter_lines():
-                if not line:
-                    continue
-                yield json.loads(line.decode("utf-8"))
-
-
-def send_emails(user_id, subject, template, recipients, dry_run=False):
-    """Send emails to recipients"""
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/send-emails",
-            data={
-                "user_id": user_id,
-                "subject": subject,
-                "template": template,
-                "recipients_json": json.dumps(recipients),
-                "dry_run": dry_run
-            }
-        )
-        if response.status_code == 200:
-            return response.json()["results"]
+            return False, response.json().get("detail", "Failed to import CSV")
     except Exception as e:
-        st.error(f"Error sending emails: {e}")
-    return []
+        return False, str(e)
+
+
+def fetch_recipients(user_id: int, used: bool | None = None):
+    """Fetch recipients for a user"""
+    try:
+        params = {}
+        if used is not None:
+            params["used"] = str(used).lower()
+
+        resp = requests.get(
+            f"{BACKEND_URL}/users/{user_id}/recipients",
+            params=params,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        st.error(f"Error fetching recipients: {e}")
+        return []
+
+
+def get_email_preview(user_id: int, recipient_id: int, subject: str) -> dict:
+    """Get email preview from backend"""
+    try:
+        resp = requests.post(
+            f"{BACKEND_URL}/users/{user_id}/preview-email/{recipient_id}",
+            data={"subject": subject},
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        st.error(f"Error getting preview: {e}")
+        return None
+
+
+def send_emails_stream(user_id, recipient_ids, subject, dry_run=False):
+    """Send emails stream"""
+    try:
+        payload = {
+            "recipient_ids": recipient_ids,
+            "subject": subject,
+            "dry_run": dry_run
+        }
+        
+        with requests.post(
+            f"{BACKEND_URL}/users/{user_id}/send-emails/stream",
+            json=payload,
+            stream=True
+        ) as response:
+            if response.status_code != 200:
+                error_msg = response.json().get("detail", "Failed to start email sending")
+                yield {"error": error_msg}
+            else:
+                for line in response.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        yield json.loads(line.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        continue
+    except Exception as e:
+        yield {"error": str(e)}
 
 
 def get_user_stats(user_id):
@@ -153,7 +182,21 @@ def get_user_stats(user_id):
             return response.json()
     except:
         pass
-    return {"total_sent": 0, "total_failed": 0, "total_emails": 0}
+    return {"total_sent": 0, "total_failed": 0, "total_skipped": 0, "total_emails": 0}
+
+
+def get_email_logs(user_id, limit=100):
+    """Get email logs for a user"""
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/users/{user_id}/email-logs",
+            params={"limit": limit}
+        )
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return []
 
 
 # Main UI
@@ -180,17 +223,24 @@ with st.sidebar:
     
     # Create new user
     with st.expander("➕ Create New User"):
-        new_username = st.text_input("Username")
-        new_email = st.text_input("Email")
+        new_username = st.text_input("Username", key="new_username")
+        new_email = st.text_input("Email", key="new_email")
         if st.button("Create User"):
             if new_username and new_email:
-                if create_user(new_username, new_email):
-                    st.success("User created!") # FIXME: not showing, need to be in st.session_state
+                success, message = create_user(new_username, new_email)
+                if success:
+                    st.session_state.user_created = True
+                    st.success("User created! Refreshing...")
                     st.rerun()
                 else:
-                    st.error("Failed to create user")
+                    st.error(f"Failed to create user: {message}")
             else:
                 st.error("Please fill all fields")
+    
+    # Show success message if user was just created
+    if st.session_state.user_created:
+        st.success("User created successfully!")
+        st.session_state.user_created = False
     
     # User stats
     if st.session_state.current_user:
@@ -219,21 +269,26 @@ with tab1:
     st.header("Send Emails")
     
     # Email subject
-    subject = st.text_input("Email Subject", placeholder="Candidature spontanée")
+    subject = st.text_input("Email Subject", placeholder="Candidature spontanée", key="email_subject")
     
     # Template editor
     st.subheader("Email Template")
-    template = st.text_area(
+    template_content = st.text_area(
         "Template (use {salutation} and {company} as placeholders)",
         value=load_template(user_id),
-        height=200
+        height=200,
+        key="template_content"
     )
     
-    if st.button("💾 Save Template"):
-        if save_template(user_id, template):
-            st.success("Template saved!")
-        else:
-            st.error("Failed to save template")
+    col_save, col_info = st.columns([1, 3])
+    with col_save:
+        if st.button("💾 Save Template"):
+            if save_template(user_id, template_content):
+                st.success("Template saved!")
+            else:
+                st.error("Failed to save template")
+    with col_info:
+        st.caption("💡 Save your template before sending emails")
     
     st.divider()
     
@@ -241,31 +296,84 @@ with tab1:
     st.subheader("Upload Recipients CSV")
     st.info("CSV should have columns: Email, First Name, Last Name, Company (or Company Name for Emails)")
     
-    csv_file = st.file_uploader("Choose CSV file", type=["csv"])
+    csv_file = st.file_uploader("Choose CSV file", type=["csv"], key="csv_uploader")
     
-    if csv_file:
-        if st.button("📥 Parse CSV"):
-            recipients = parse_csv(user_id, csv_file)
-            st.session_state.recipients = recipients
-            st.success(f"Loaded {len(recipients)} recipients")
+    if csv_file and st.button("📥 Import CSV"):
+        success, result = upload_recipients_csv(user_id, csv_file)
+        if success:
+            st.success(f"Added {result.get('created', 0)} new recipients! ({result.get('total', 0)} processed in total)")
+            st.rerun()
+        else:
+            st.error(f"Error importing CSV: {result}")
     
     # Display recipients
-    if st.session_state.recipients:
-        st.subheader(f"Recipients ({len(st.session_state.recipients)})")
+    filter_option = st.radio(
+        "Filter recipients",
+        options=["All", "Used", "Unused"],
+        horizontal=True,
+        key="recipient_filter"
+    )
+
+    used_filter = {
+        "All": None,
+        "Used": True,
+        "Unused": False,
+    }[filter_option]
+
+    displayed_recipients = fetch_recipients(user_id, used_filter)
+
+    st.subheader(f"Recipients ({len(displayed_recipients)})")
+
+    if not displayed_recipients:
+        st.info("No recipients found. Upload a CSV file to import recipients.")
+    else:
+        # Display recipients with selection
+        df = pd.DataFrame(displayed_recipients)
         
-        df = pd.DataFrame(st.session_state.recipients)
-        st.dataframe(df, use_container_width=True)
+        # Add selection column
+        if "selected_recipients" not in st.session_state:
+            st.session_state.selected_recipients = []
         
+        # Multi-select recipients
+        selected_indices = st.multiselect(
+            "Select recipients to send emails to (leave empty to send to all unused)",
+            options=range(len(displayed_recipients)),
+            format_func=lambda i: f"{displayed_recipients[i].get('email', 'N/A')} - {displayed_recipients[i].get('first_name', '')} {displayed_recipients[i].get('last_name', '')}",
+            key="recipient_selection"
+        )
+        
+        st.dataframe(df[["email", "first_name", "last_name", "company"]], use_container_width=True)
+
         # Preview
-        st.subheader("📝 Email Preview")
-        preview_idx = st.selectbox("Select recipient to preview", range(len(st.session_state.recipients)))
-        
-        if preview_idx is not None:
-            recipient = st.session_state.recipients[preview_idx]
-            salutation = f"Monsieur {recipient['last_name']}"  # Simplified
-            preview_body = template.format(salutation=salutation, company=recipient['company'])
+        if displayed_recipients:
+            st.subheader("📝 Email Preview")
+            preview_idx = st.selectbox(
+                "Select recipient for preview",
+                options=range(len(displayed_recipients)),
+                format_func=lambda i: displayed_recipients[i].get("email", "N/A"),
+                key="preview_recipient"
+            )
             
-            st.text_area("Preview", value=preview_body, height=200, disabled=True)
+            if preview_idx is not None and subject:
+                recipient = displayed_recipients[preview_idx]
+                recipient_id = recipient.get("id")
+                
+                if recipient_id:
+                    preview = get_email_preview(user_id, recipient_id, subject)
+                    if preview:
+                        st.text_area(
+                            "Preview",
+                            value=preview.get("body", ""),
+                            height=200,
+                            disabled=True,
+                            key="preview_body"
+                        )
+                    else:
+                        st.warning("Could not generate preview. Make sure template is saved.")
+                else:
+                    st.warning("Recipient ID not found")
+            elif not subject:
+                st.info("Enter a subject to see preview")
         
         st.divider()
         
@@ -273,63 +381,89 @@ with tab1:
         col1, col2 = st.columns(2)
         
         with col1:
-            dry_run = st.checkbox("🧪 Dry Run (Don't actually send)", value=False)
+            dry_run = st.checkbox("🧪 Dry Run (Don't actually send)", value=False, key="dry_run")
         
         with col2:
             if st.button("📧 Send Emails", type="primary", use_container_width=True):
                 if not subject:
                     st.error("Please enter an email subject")
-                elif not template:
+                elif not template_content:
                     st.error("Please enter an email template")
                 else:
+                    # Save template first
+                    if not save_template(user_id, template_content):
+                        st.error("Failed to save template. Please try again.")
+                        st.stop()
+                    
+                    # Determine which recipients to send to
+                    if selected_indices:
+                        recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices]
+                    else:
+                        # Send to all unused recipients
+                        unused_recipients = fetch_recipients(user_id, used=False)
+                        recipient_ids = [r["id"] for r in unused_recipients]
+                    
+                    if not recipient_ids:
+                        st.warning("No recipients selected or no unused recipients available.")
+                        st.stop()
+                    
                     with st.spinner("Sending emails..."):
-                        # results = send_emails(user_id, subject, template, st.session_state.recipients, dry_run)
                         status_box = st.empty()
                         log_box = st.container()
                         progress = st.progress(0)
                         sent = 0
                         failed = 0
                         skipped = 0
-                        total = len(recipients)
-                        for i, event in enumerate(send_emails_stream(user_id, subject, template, st.session_state.recipients, dry_run)):
+                        total = len(recipient_ids)
+                        errors = []
+                        
+                        for i, event in enumerate(send_emails_stream(user_id, recipient_ids, subject, dry_run)):
+                            if "error" in event:
+                                st.error(f"Error: {event['error']}")
+                                break
+                            
                             # Update UI incrementally
                             with log_box:
-                                st.write(event)
+                                status_text = f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+                                if event.get('message'):
+                                    status_text += f" ({event.get('message')})"
+                                st.text(status_text)
 
                             status_box.info(
-                                f"Last email: {event.get('email')} → {event.get('status')}"
+                                f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
                             )
 
-                            match event["status"]:
-                                case "sent":
-                                    sent += 1
-                                case "failed":
-                                    failed += 1
-                                case "skipped":
-                                    skipped += 1
-                            progress.progress((i + 1) / total)
-
-                        # # Display results
-                        # st.subheader("Results")
+                            status = event.get("status", "")
+                            if status == "sent":
+                                sent += 1
+                            elif status == "failed":
+                                failed += 1
+                                errors.append({
+                                    "email": event.get("email", "N/A"),
+                                    "message": event.get("message", "Unknown error")
+                                })
+                            elif status == "skipped":
+                                skipped += 1
+                            
+                            if total > 0:
+                                progress.progress((i + 1) / total)
                         
-                        # sent = [r for r in results if r["status"] == "sent"]
-                        # failed = [r for r in results if r["status"] == "failed"]
-                        # skipped = [r for r in results if r["status"] == "skipped"]
-                        
+                        # Display results
                         col1, col2, col3 = st.columns(3)
                         col1.metric("✅ Sent", sent)
                         col2.metric("❌ Failed", failed)
                         col3.metric("⏭️ Skipped", skipped)
                         
-                        if failed:
-                            st.error("Failed emails:")
-                            for r in failed:
-                                st.write(f"- {r['email']}: {r['message']}")
+                        if errors:
+                            with st.expander("Failed emails details"):
+                                for err in errors:
+                                    st.write(f"- {err['email']}: {err['message']}")
                         
                         if dry_run:
                             st.info("Dry run completed - no emails were actually sent")
                         else:
                             st.success("Email sending completed!")
+                            st.rerun()
 
 with tab2:
     st.header("Configuration")
@@ -348,7 +482,7 @@ with tab2:
     st.divider()
     
     st.subheader("📄 Upload Resume")
-    resume_file = st.file_uploader("Choose resume PDF", type=["pdf"])
+    resume_file = st.file_uploader("Choose resume PDF", type=["pdf"], key="resume_uploader")
     
     if resume_file:
         if st.button("Upload Resume"):
@@ -359,12 +493,32 @@ with tab2:
 
 with tab3:
     st.header("Email History")
-    st.info("History feature coming soon!")
     
-    # TODO: Implement email logs display
     stats = get_user_stats(user_id)
-    st.write(f"Total emails sent: {stats['total_sent']}")
-    st.write(f"Total emails failed: {stats['total_failed']}")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Sent", stats["total_sent"])
+    col2.metric("Total Failed", stats["total_failed"])
+    col3.metric("Total Skipped", stats["total_skipped"])
+    col4.metric("Total Emails", stats["total_emails"])
+    
+    st.divider()
+    
+    # Email logs
+    limit = st.slider("Number of logs to display", min_value=10, max_value=500, value=100, step=10)
+    logs = get_email_logs(user_id, limit)
+    
+    if logs:
+        logs_df = pd.DataFrame(logs)
+        # Format datetime
+        if "sent_at" in logs_df.columns:
+            logs_df["sent_at"] = pd.to_datetime(logs_df["sent_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+        
+        st.dataframe(
+            logs_df[["email", "subject", "status", "sent_at", "error_message"]],
+            use_container_width=True
+        )
+    else:
+        st.info("No email logs found")
 
 # Footer
 st.divider()

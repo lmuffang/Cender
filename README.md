@@ -238,3 +238,16 @@ For issues or questions:
 1. Check the troubleshooting section above
 2. Review Docker logs: `docker-compose logs`
 3. Check individual service logs: `docker-compose logs backend` or `docker-compose logs frontend`
+
+
+
+TODO:
+- make one template per user, create an update route for it DONE
+- fix csv parsing: can be too heavy, write it to db? each entry being a line in a table, if email exist, ignore or merge infos. Then a EmailLog can be linked to the Recipient id table, not email adress direclty
+- add specific selection of recipiants? not only not "used" ones?
+- add expost history log and import history log (allows for some backwards compatibility via simple csv data.) Best would be to export all user data
+- add migration with alembic for proper import/export of data?
+- being able to delete emails logs (all or apecific, by date for example). Need ot be able to visualize emails logs first of course
+- refactor app.py and main.py, too much happening 
+- user selected feilds for template keywords for custom made csv 
+- AI generated emails, depeding on csv data (company type, size, etc...). Would need OpenAI key or local LMM (ollama but not very good as cloud providers)
