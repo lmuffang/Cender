@@ -4,7 +4,7 @@ import datetime
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 import pandas as pd
 from sqlalchemy.orm import Session
 
@@ -44,12 +44,11 @@ class UserCreate(BaseModel):
     email: EmailStr
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     username: str
     email: EmailStr
-
-    class Config:
-        orm_mode = True
 
 class RecipientCreate(BaseModel):
     email: EmailStr
@@ -58,6 +57,8 @@ class RecipientCreate(BaseModel):
     company: str | None = None
 
 class RecipientResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     email: str
     first_name: str | None
@@ -65,18 +66,14 @@ class RecipientResponse(BaseModel):
     salutation: str | None
     company: str | None
 
-    class Config:
-        orm_mode = True
-
 class TemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     user_id: int
     content: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
-
-    class Config:
-        orm_mode = True
 
 class TemplateUpdate(BaseModel):
     content: str
@@ -87,6 +84,8 @@ class EmailPreview(BaseModel):
     body: str
 
 class EmailLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     user_id: int
     recipient_id: int | None
@@ -95,9 +94,6 @@ class EmailLogResponse(BaseModel):
     status: str
     sent_at: datetime.datetime
     error_message: str | None
-
-    class Config:
-        orm_mode = True
 
 class SendEmailsRequest(BaseModel):
     recipient_ids: list[int]
