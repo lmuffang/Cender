@@ -14,7 +14,7 @@ if ! command -v docker-compose &> /dev/null; then
 fi
 
 # Run tests using docker-compose
-docker-compose --profile testing run --rm pytest "$@"
+docker-compose --profile testing run --rm --build pytest "$@"
 
 echo "✅ Tests completed!"
 
