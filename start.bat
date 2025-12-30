@@ -21,6 +21,6 @@ if not exist "backend" mkdir backend
 if not exist "frontend" mkdir frontend
 
 REM Start Docker Compose
-docker-compose up --build
+docker compose up --build
 
 pause

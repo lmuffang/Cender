@@ -17,4 +17,4 @@ echo ""
 mkdir -p data credentials backend frontend
 
 # Start Docker Compose
-docker-compose up --build
+docker compose up --build

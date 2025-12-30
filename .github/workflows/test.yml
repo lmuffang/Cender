@@ -18,7 +18,7 @@ jobs:
 
     - name: Run tests
       run: |
-        docker-compose --profile testing run --rm pytest tests/ -v --tb=short
+        docker compose --profile testing run --rm --build pytest
 
     - name: Test summary
       if: always()

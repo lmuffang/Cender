@@ -1,5 +1,5 @@
 # stop.sh (Mac/Linux)
 #!/bin/bash
 echo "Stopping Cender..."
-docker-compose down
+docker compose down
 echo "Application stopped."

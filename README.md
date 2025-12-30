@@ -213,7 +213,7 @@ API documentation: http://localhost:8000/docs
 To modify the code:
 
 1. Edit files in `backend/` or `frontend/`
-2. Restart the containers: `docker-compose restart`
+2. Restart the containers: `docker compose restart`
 3. Or use hot-reload (already configured):
    - Backend: FastAPI auto-reloads on file changes
    - Frontend: Streamlit auto-reloads on file changes
@@ -264,8 +264,8 @@ See `backend/tests/README.md` for more details.
 
 For issues or questions:
 1. Check the troubleshooting section above
-2. Review Docker logs: `docker-compose logs`
-3. Check individual service logs: `docker-compose logs backend` or `docker-compose logs frontend`
+2. Review Docker logs: `docker compose logs`
+3. Check individual service logs: `docker compose logs backend` or `docker compose logs frontend`
 
 ## Roadmap
 
