@@ -4,10 +4,7 @@ from fastapi import status
 
 def test_create_user(client):
     """Test creating a new user"""
-    response = client.post(
-        "/users/",
-        json={"username": "newuser", "email": "newuser@example.com"}
-    )
+    response = client.post("/users/", json={"username": "newuser", "email": "newuser@example.com"})
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == "newuser"
@@ -18,16 +15,10 @@ def test_create_user(client):
 def test_create_user_duplicate_email(client):
     """Test creating a user with duplicate email"""
     # Create first user
-    client.post(
-        "/users/",
-        json={"username": "user1", "email": "duplicate@example.com"}
-    )
-    
+    client.post("/users/", json={"username": "user1", "email": "duplicate@example.com"})
+
     # Try to create second user with same email
-    response = client.post(
-        "/users/",
-        json={"username": "user2", "email": "duplicate@example.com"}
-    )
+    response = client.post("/users/", json={"username": "user2", "email": "duplicate@example.com"})
     assert response.status_code == status.HTTP_409_CONFLICT
 
 
@@ -55,4 +46,3 @@ def test_get_user_not_found(client):
     """Test getting a non-existent user"""
     response = client.get("/users/99999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-

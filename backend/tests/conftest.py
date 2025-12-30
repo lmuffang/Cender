@@ -17,14 +17,14 @@ def test_db():
     temp_dir = tempfile.mkdtemp()
     db_path = os.path.join(temp_dir, "test.db")
     test_engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-    
+
     # Create all tables
     Base.metadata.create_all(bind=test_engine)
-    
+
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-    
+
     yield TestingSessionLocal
-    
+
     # Cleanup
     shutil.rmtree(temp_dir)
 
@@ -32,13 +32,14 @@ def test_db():
 @pytest.fixture(scope="function")
 def client(test_db):
     """Create a test client with test database"""
+
     def override_get_db():
         db = test_db()
         try:
             yield db
         finally:
             db.close()
-    
+
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)
     yield client
@@ -62,10 +63,7 @@ def test_recipient(test_db):
     """Create a test recipient"""
     db = test_db()
     recipient = Recipient(
-        email="recipient@example.com",
-        first_name="John",
-        last_name="Doe",
-        company="Test Company"
+        email="recipient@example.com", first_name="John", last_name="Doe", company="Test Company"
     )
     db.add(recipient)
     db.commit()
@@ -78,13 +76,9 @@ def test_recipient(test_db):
 def test_template(test_db, test_user):
     """Create a test template for a user"""
     db = test_db()
-    template = Template(
-        user_id=test_user.id,
-        content="Hello {salutation}, welcome to {company}!"
-    )
+    template = Template(user_id=test_user.id, content="Hello {salutation}, welcome to {company}!")
     db.add(template)
     db.commit()
     db.refresh(template)
     db.close()
     return template
-

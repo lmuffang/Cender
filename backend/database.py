@@ -21,19 +21,11 @@ from sqlalchemy.orm import (
 )
 
 
-
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/app.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 class Base(DeclarativeBase):
@@ -44,6 +36,7 @@ class EmailStatus(str, enum.Enum):
     SENT = "sent"
     FAILED = "failed"
     SKIPPED = "skipped"
+
 
 # Association Table for Many to many User <> Recipient
 user_recipients = Table(
@@ -63,6 +56,7 @@ user_recipients = Table(
     ),
 )
 
+
 # Models
 class User(Base):
     __tablename__ = "users"
@@ -70,23 +64,17 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True, nullable=False)
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     recipients: Mapped[list["Recipient"]] = relationship(
         secondary=user_recipients,
         back_populates="users",
     )
 
-    emails: Mapped[list["EmailLog"]] = relationship(
-        cascade="all, delete-orphan"
-    )
+    emails: Mapped[list["EmailLog"]] = relationship(cascade="all, delete-orphan")
 
-    template: Mapped["Template"] = relationship(
-        uselist=False,
-        cascade="all, delete-orphan"
-    )
+    template: Mapped["Template"] = relationship(uselist=False, cascade="all, delete-orphan")
+
 
 class EmailLog(Base):
     __tablename__ = "email_logs"
@@ -112,21 +100,14 @@ class EmailLog(Base):
         nullable=False,
     )
 
-    sent_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    sent_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     error_message: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
-    user: Mapped["User"] = relationship(
-        back_populates="emails"
-    )
+    user: Mapped["User"] = relationship(back_populates="emails")
 
-    recipient: Mapped["Recipient"] = relationship(
-        back_populates="emails"
-    )
-
+    recipient: Mapped["Recipient"] = relationship(back_populates="emails")
 
 
 class Template(Base):
@@ -154,6 +135,7 @@ class Template(Base):
 
     user: Mapped["User"] = relationship(back_populates="template")
 
+
 class Recipient(Base):
     __tablename__ = "recipients"
 
@@ -164,16 +146,11 @@ class Recipient(Base):
     salutation: Mapped[str | None]
     company: Mapped[str | None]
 
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     users: Mapped[list["User"]] = relationship(
         secondary=user_recipients,
         back_populates="recipients",
     )
 
-    emails: Mapped[list["EmailLog"]] = relationship(
-        back_populates="recipient"
-    )
-
+    emails: Mapped[list["EmailLog"]] = relationship(back_populates="recipient")
