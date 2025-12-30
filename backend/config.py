@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     log_format: str = "json"  # "json" or "text"
     
     # Application
-    app_name: str = "CV Email Sender API"
+    app_name: str = "Cender API"
     app_version: str = "1.0.0"
     
     model_config = SettingsConfigDict(

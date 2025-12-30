@@ -1,5 +1,5 @@
 @echo off
-echo Starting CV Email Sender...
+echo Starting Cender...
 echo.
 
 REM Check if Docker is running

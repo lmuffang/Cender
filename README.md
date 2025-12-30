@@ -1,6 +1,6 @@
-# CV Email Sender - Web Application
+# Cender - The simplest way to reach out for job applications
 
-Modern web-based CV email sender with multi-user support, built with Streamlit and FastAPI.
+Modern web-based CV/resume email sender with multi-user support, built with Streamlit and FastAPI.
 
 ## Features
 

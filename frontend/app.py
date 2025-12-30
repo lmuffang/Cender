@@ -8,7 +8,7 @@ import os
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 st.set_page_config(
-    page_title="CV Email Sender",
+    page_title="Cender",
     page_icon="📧",
     layout="wide"
 )
@@ -239,7 +239,7 @@ def delete_email_log(user_id, log_id):
 
 
 # Main UI
-st.title("📧 CV Email Sender")
+st.title("📧 Cender")
 
 # Sidebar - User Selection
 with st.sidebar:
@@ -419,7 +419,7 @@ with tab1:
         dry_run = st.checkbox("🧪 Dry Run (Don't actually send)", value=False, key="dry_run")
 
         st.divider() 
-        
+
         if st.button("📧 Send Emails", type="primary", use_container_width=True):
             if not subject:
                 st.error("Please enter an email subject")
@@ -638,4 +638,4 @@ with tab3:
 
 # Footer
 st.divider()
-st.caption("CV Email Sender - Made with Streamlit & FastAPI")
+st.caption("Cender - The resume sender made with Streamlit & FastAPI")

@@ -6,7 +6,7 @@ from typing import Any
 from config import settings
 
 
-def setup_logger(name: str = "cv_email_sender") -> logging.Logger:
+def setup_logger(name: str = "cender") -> logging.Logger:
     """
     Set up structured logger.
     

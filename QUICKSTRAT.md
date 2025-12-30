@@ -22,7 +22,7 @@ chmod +x start.sh
 
 ### Step 3: Open the App
 - Open your browser to: **http://localhost:8501**
-- You should see the CV Email Sender interface
+- You should see the Cender interface
 
 ### Step 4: First-Time Setup (One-time per user)
 

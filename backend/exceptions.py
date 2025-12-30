@@ -2,7 +2,7 @@
 
 
 class CVEmailSenderError(Exception):
-    """Base exception for CV Email Sender application."""
+    """Base exception for Cender application."""
     pass
 
 

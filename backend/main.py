@@ -117,7 +117,7 @@ class SendEmailsRequest(BaseModel):
 # ============================================================================
 @app.get("/")
 async def root():
-    return {"message": "CV Email Sender API"}
+    return {"message": "Cender API"}
 
 
 # ============================================================================

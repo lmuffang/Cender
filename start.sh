@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting CV Email Sender..."
+echo "Starting Cender..."
 echo ""
 
 # Check if Docker is running
