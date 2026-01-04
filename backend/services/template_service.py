@@ -30,7 +30,7 @@ class TemplateService:
 
         template = self.db.query(Template).filter(Template.user_id == user_id).first()
         if template:
-            return {"content": template.content}
+            return {"content": template.content, "subject": template.subject}
 
         # Default template
         default = (
@@ -40,15 +40,16 @@ class TemplateService:
             "Cordialement,\n"
             "Votre Nom"
         )
-        return {"content": default}
+        return {"content": default, "subject": ""}
 
-    def create_or_update(self, user_id: int, content: str) -> Template:
+    def create_or_update(self, user_id: int, content: str, subject: str) -> Template:
         """
         Create or update user's template.
 
         Args:
             user_id: User ID
             content: Template content
+            subject: Template subject
 
         Returns:
             Template instance
@@ -62,9 +63,10 @@ class TemplateService:
         template = self.db.query(Template).filter(Template.user_id == user_id).first()
         if template:
             template.content = content
+            template.subject = subject
             logger.info(f"Updated template for user {user_id}")
         else:
-            template = Template(user_id=user_id, content=content)
+            template = Template(user_id=user_id, content=content, subject=subject)
             self.db.add(template)
             logger.info(f"Created template for user {user_id}")
 

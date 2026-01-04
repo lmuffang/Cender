@@ -76,7 +76,7 @@ def test_recipient(test_db):
 def test_template(test_db, test_user):
     """Create a test template for a user"""
     db = test_db()
-    template = Template(user_id=test_user.id, content="Hello {salutation}, welcome to {company}!")
+    template = Template(user_id=test_user.id, content="Hello {salutation}, welcome to {company}!", subject="Testing Welcome")
     db.add(template)
     db.commit()
     db.refresh(template)
