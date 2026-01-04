@@ -122,6 +122,8 @@ class Template(Base):
 
     content: Mapped[str] = mapped_column(Text)
 
+    subject: Mapped[str] = mapped_column(nullable=False, default="")
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=functools.partial(datetime.now, timezone.utc),

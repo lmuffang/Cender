@@ -279,6 +279,7 @@ For issues or questions:
 - [x] Backend API refactoring and organization
 - [x] Comprehensive test suite
 - [x] Docker-based testing infrastructure
+- [x] **Template enhancement**: Store email subject in it.
 
 ### 🚧 In Progress / Short-term
 - [ ] **Recipient Selection Enhancement**: Allow selecting specific recipients (not just unused ones) - Partially done
@@ -286,7 +287,6 @@ For issues or questions:
 - [ ] **Database Migrations**: Add Alembic for proper schema versioning and migrations
 - [ ] **Custom Template Variables**: Allow users to define custom CSV fields for template placeholders
 - [ ] **Frontend usage**: block all actions when sending emails
-- [ ] **Template enhancement**: Store email subject in it.
 
 ### 🔮 Future Enhancements
 - [ ] **AI-Generated Emails**: Generate personalized emails based on company data (requires OpenAI API or local LLM)

@@ -97,12 +97,14 @@ class TemplateResponse(BaseModel):
     id: int
     user_id: int
     content: str
+    subject: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
 
 class TemplateUpdate(BaseModel):
     content: str
+    subject: str
 
 
 class EmailPreview(BaseModel):
@@ -234,6 +236,7 @@ async def get_template(user_id: int, db: Session = Depends(get_db)):
                 id=0,
                 user_id=user_id,
                 content=template_data["content"],
+                subject=template_data["subject"],
                 created_at=datetime.datetime.now(datetime.timezone.utc),
                 updated_at=datetime.datetime.now(datetime.timezone.utc),
             )
@@ -248,7 +251,7 @@ async def create_or_update_template(
     """Create or update user's template"""
     try:
         template_service = TemplateService(db)
-        return template_service.create_or_update(user_id, template_update.content)
+        return template_service.create_or_update(user_id, template_update.content, template_update.subject)
     except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

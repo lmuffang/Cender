@@ -66,17 +66,17 @@ def load_template(user_id):
     try:
         response = requests.get(f"{BACKEND_URL}/users/{user_id}/template")
         if response.status_code == 200:
-            return response.json()["content"]
+            return response.json()
     except:
         pass
     return ""
 
 
-def save_template(user_id, content):
+def save_template(user_id, content, subject=""):
     """Save user's template"""
     try:
         response = requests.post(
-            f"{BACKEND_URL}/users/{user_id}/template", json={"content": content}
+            f"{BACKEND_URL}/users/{user_id}/template", json={"content": content, "subject": subject}
         )
         return response.status_code in [200, 201]
     except:
@@ -276,16 +276,19 @@ tab1, tab2, tab3 = st.tabs(["📤 Send Emails", "⚙️ Configuration", "📜 Hi
 with tab1:
     st.header("Send Emails")
 
+    template = load_template(user_id)
+    template_content = template.get("content", "") if template else ""
+    subject = template.get("subject", "") if template else ""
     # Email subject
     subject = st.text_input(
-        "Email Subject", placeholder="Candidature spontanée", key="email_subject"
+        "Email Subject", placeholder="Candidature spontanée", value=subject, key="email_subject"
     )
 
     # Template editor
     st.subheader("Email Template")
     template_content = st.text_area(
         "Template (use {salutation} and {company} as placeholders)",
-        value=load_template(user_id),
+        value=template_content,
         height=200,
         key="template_content",
     )
@@ -293,7 +296,7 @@ with tab1:
     col_save, col_info = st.columns([1, 3])
     with col_save:
         if st.button("💾 Save Template"):
-            if save_template(user_id, template_content):
+            if save_template(user_id, template_content, subject):
                 st.success("Template saved!")
             else:
                 st.error("Failed to save template")
@@ -402,7 +405,7 @@ with tab1:
                 st.error("Please enter an email template")
             else:
                 # Save template first
-                if not save_template(user_id, template_content):
+                if not save_template(user_id, template_content, subject):
                     st.error("Failed to save template. Please try again.")
                     st.stop()
 
