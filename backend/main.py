@@ -174,6 +174,25 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@app.delete("/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a user and all associated data.
+
+    This will permanently delete:
+    - User's email template
+    - User's email logs
+    - User's recipient links (recipients themselves are kept)
+    - User's files (credentials, token, resume)
+    """
+    try:
+        user_service = UserService(db)
+        result = user_service.delete(user_id)
+        return result
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ============================================================================
 # USER-SPECIFIC RESOURCES (Credentials, Resume)
 # ============================================================================

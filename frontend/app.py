@@ -53,6 +53,18 @@ def create_user(username, email):
         return False, str(e)
 
 
+def delete_user(user_id):
+    """Delete a user and all associated data"""
+    try:
+        response = requests.delete(f"{BACKEND_URL}/users/{user_id}")
+        if response.status_code == 200:
+            return True, response.json()
+        else:
+            return False, response.json().get("detail", "Failed to delete user")
+    except Exception as e:
+        return False, str(e)
+
+
 def upload_credentials(user_id, file):
     """Upload Gmail credentials"""
     try:
@@ -331,6 +343,35 @@ with st.sidebar:
         col1, col2 = st.columns(2)
         col1.metric("Sent", stats["total_sent"])
         col2.metric("Failed", stats["total_failed"])
+
+        # Delete user section
+        st.divider()
+        with st.expander("🗑️ Delete User", expanded=False):
+            st.warning(
+                f"**This will permanently delete:**\n"
+                f"- User '{st.session_state.current_user['username']}'\n"
+                f"- All email logs ({stats['total_sent'] + stats['total_failed']} records)\n"
+                f"- Email template\n"
+                f"- Uploaded files (credentials, token, resume)"
+            )
+            st.info("Recipients are shared and will NOT be deleted.")
+
+            confirm_text = st.text_input(
+                f"Type **{st.session_state.current_user['username']}** to confirm:",
+                key="delete_user_confirm"
+            )
+
+            if st.button("🗑️ Delete User Permanently", type="primary", use_container_width=True):
+                if confirm_text == st.session_state.current_user["username"]:
+                    success, result = delete_user(st.session_state.current_user["id"])
+                    if success:
+                        st.success(result.get("message", "User deleted successfully!"))
+                        st.session_state.current_user = None
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to delete user: {result}")
+                else:
+                    st.error("Username doesn't match. Please type the exact username to confirm.")
 
 
 # Main content
