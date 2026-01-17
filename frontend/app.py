@@ -14,6 +14,18 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = None
 if "user_created" not in st.session_state:
     st.session_state.user_created = False
+if "creds_upload_key" not in st.session_state:
+    st.session_state.creds_upload_key = 0
+if "resume_upload_key" not in st.session_state:
+    st.session_state.resume_upload_key = 0
+if "csv_upload_key" not in st.session_state:
+    st.session_state.csv_upload_key = 0
+if "sending_emails" not in st.session_state:
+    st.session_state.sending_emails = False
+if "send_results" not in st.session_state:
+    st.session_state.send_results = None
+if "send_data" not in st.session_state:
+    st.session_state.send_data = None
 
 
 def load_users():
@@ -188,18 +200,30 @@ def send_emails_stream(user_id, recipient_ids, subject, dry_run=False):
             f"{BACKEND_URL}/users/{user_id}/send-emails/stream", json=payload, stream=True
         ) as response:
             if response.status_code != 200:
-                error_msg = response.json().get("detail", "Failed to start email sending")
+                try:
+                    error_msg = response.json().get("detail", "Failed to start email sending")
+                except Exception:
+                    error_msg = f"Server error (status {response.status_code})"
                 yield {"error": error_msg}
-            else:
-                for line in response.iter_lines():
-                    if not line:
-                        continue
-                    try:
-                        yield json.loads(line.decode("utf-8"))
-                    except json.JSONDecodeError:
-                        continue
+                return
+
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line.decode("utf-8"))
+                    yield event
+                    # Stop on stream error
+                    if "error" in event:
+                        return
+                except json.JSONDecodeError:
+                    continue
+    except requests.exceptions.ConnectionError:
+        yield {"error": "Cannot connect to backend server. Is it running?"}
+    except requests.exceptions.Timeout:
+        yield {"error": "Request timed out. Please try again."}
     except Exception as e:
-        yield {"error": str(e)}
+        yield {"error": f"Unexpected error: {str(e)}"}
 
 
 def get_user_stats(user_id):
@@ -317,6 +341,113 @@ if not st.session_state.current_user:
 user_id = st.session_state.current_user["id"]
 username = st.session_state.current_user["username"]
 
+# Block UI while sending emails
+if st.session_state.sending_emails:
+    st.warning("📧 **Sending emails in progress...**")
+    st.info("Please wait until all emails are sent. Do not close this page.")
+
+    # Show progress container
+    progress_container = st.container()
+
+    # Process the email sending
+    send_data = st.session_state.get("send_data", {})
+    recipient_ids = send_data.get("recipient_ids", [])
+    subject = send_data.get("subject", "")
+    dry_run = send_data.get("dry_run", False)
+
+    with progress_container:
+        status_box = st.empty()
+        progress = st.progress(0)
+        log_box = st.container()
+        sent = 0
+        failed = 0
+        skipped = 0
+        total = len(recipient_ids)
+        errors = []
+        stream_error = None
+
+        for i, event in enumerate(
+            send_emails_stream(user_id, recipient_ids, subject, dry_run)
+        ):
+            if "error" in event:
+                stream_error = event["error"]
+                break
+
+            # Update UI incrementally
+            with log_box:
+                status_text = (
+                    f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+                )
+                if event.get("message"):
+                    status_text += f" ({event.get('message')})"
+                st.text(status_text)
+
+            status_box.info(
+                f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+            )
+
+            status = event.get("status", "")
+            if status == "sent":
+                sent += 1
+            elif status == "failed":
+                failed += 1
+                errors.append(
+                    {
+                        "email": event.get("email", "N/A"),
+                        "message": event.get("message", "Unknown error"),
+                    }
+                )
+            elif status == "skipped":
+                skipped += 1
+
+            if total > 0:
+                progress.progress((i + 1) / total)
+
+    # Store results and clear sending state
+    st.session_state.send_results = {
+        "sent": sent,
+        "failed": failed,
+        "skipped": skipped,
+        "errors": errors,
+        "stream_error": stream_error,
+        "dry_run": dry_run,
+    }
+    st.session_state.sending_emails = False
+    st.session_state.send_data = None
+    st.rerun()
+
+    # This won't be reached due to rerun, but just in case
+    st.stop()
+
+# Show results from previous send operation
+if st.session_state.send_results:
+    results = st.session_state.send_results
+    st.divider()
+
+    if results["stream_error"]:
+        st.error(f"Error: {results['stream_error']}")
+    else:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("✅ Sent", results["sent"])
+        col2.metric("❌ Failed", results["failed"])
+        col3.metric("⏭️ Skipped", results["skipped"])
+
+        if results["errors"]:
+            with st.expander("Failed emails details"):
+                for err in results["errors"]:
+                    st.write(f"- {err['email']}: {err['message']}")
+
+        if results["dry_run"]:
+            st.info("Dry run completed - no emails were actually sent")
+        else:
+            st.success("Email sending completed!")
+
+    if st.button("Dismiss Results"):
+        st.session_state.send_results = None
+        st.rerun()
+
+    st.divider()
+
 st.subheader(f"Welcome, {username}! 👋")
 
 # Tabs
@@ -360,7 +491,10 @@ with tab1:
         "CSV should have columns: Email, First Name, Last Name, Company (or Company Name for Emails)"
     )
 
-    csv_file = st.file_uploader("Choose CSV file", type=["csv"], key="csv_uploader")
+    csv_file = st.file_uploader(
+        "Choose CSV file", type=["csv"],
+        key=f"csv_{st.session_state.csv_upload_key}"
+    )
 
     if csv_file and st.button("📥 Import CSV"):
         success, result = upload_recipients_csv(user_id, csv_file)
@@ -368,6 +502,7 @@ with tab1:
             st.success(
                 f"Added {result.get('created', 0)} new recipients! ({result.get('total', 0)} processed in total)"
             )
+            st.session_state.csv_upload_key += 1
             st.rerun()
         else:
             st.error(f"Error importing CSV: {result}")
@@ -448,91 +583,55 @@ with tab1:
         st.divider()
 
         if st.button("📧 Send Emails", type="primary", use_container_width=True):
+            # Validation checks
             if not subject:
                 st.error("Please enter an email subject")
-            elif not template_content:
+                st.stop()
+            if not template_content:
                 st.error("Please enter an email template")
+                st.stop()
+
+            # Pre-flight checks (skip for dry run)
+            if not dry_run:
+                preflight_status = get_files_status(user_id)
+                gmail_preflight = get_gmail_status(user_id)
+
+                if not preflight_status["has_credentials"]:
+                    st.error("Gmail credentials not uploaded. Please go to Configuration tab and upload your credentials.json file.")
+                    st.stop()
+                if not gmail_preflight["connected"]:
+                    error_detail = gmail_preflight.get("error", "Unknown error")
+                    st.error(f"Gmail not connected. Please go to Configuration tab to connect your Gmail account. ({error_detail})")
+                    st.stop()
+                if not preflight_status["has_resume"]:
+                    st.error("Resume not uploaded. Please go to Configuration tab and upload your resume PDF.")
+                    st.stop()
+
+            # Save template first
+            if not save_template(user_id, template_content, subject):
+                st.error("Failed to save template. Please try again.")
+                st.stop()
+
+            # Determine which recipients to send to
+            if selected_indices:
+                recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices]
             else:
-                # Save template first
-                if not save_template(user_id, template_content, subject):
-                    st.error("Failed to save template. Please try again.")
-                    st.stop()
+                # Send to all unused recipients
+                unused_recipients = fetch_recipients(user_id, used=False)
+                recipient_ids = [r["id"] for r in unused_recipients]
 
-                # Determine which recipients to send to
-                if selected_indices:
-                    recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices]
-                else:
-                    # Send to all unused recipients
-                    unused_recipients = fetch_recipients(user_id, used=False)
-                    recipient_ids = [r["id"] for r in unused_recipients]
+            if not recipient_ids:
+                st.warning("No recipients selected or no unused recipients available.")
+                st.stop()
 
-                if not recipient_ids:
-                    st.warning("No recipients selected or no unused recipients available.")
-                    st.stop()
-
-                with st.spinner("Sending emails..."):
-                    status_box = st.empty()
-                    progress = st.progress(0)
-                    log_box = st.container()
-                    sent = 0
-                    failed = 0
-                    skipped = 0
-                    total = len(recipient_ids)
-                    errors = []
-
-                    for i, event in enumerate(
-                        send_emails_stream(user_id, recipient_ids, subject, dry_run)
-                    ):
-                        if "error" in event:
-                            st.error(f"Error: {event['error']}")
-                            break
-
-                        # Update UI incrementally
-                        with log_box:
-                            status_text = (
-                                f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-                            )
-                            if event.get("message"):
-                                status_text += f" ({event.get('message')})"
-                            st.text(status_text)
-
-                        status_box.info(
-                            f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-                        )
-
-                        status = event.get("status", "")
-                        if status == "sent":
-                            sent += 1
-                        elif status == "failed":
-                            failed += 1
-                            errors.append(
-                                {
-                                    "email": event.get("email", "N/A"),
-                                    "message": event.get("message", "Unknown error"),
-                                }
-                            )
-                        elif status == "skipped":
-                            skipped += 1
-
-                        if total > 0:
-                            progress.progress((i + 1) / total)
-
-                    # Display results
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("✅ Sent", sent)
-                    col2.metric("❌ Failed", failed)
-                    col3.metric("⏭️ Skipped", skipped)
-
-                    if errors:
-                        with st.expander("Failed emails details"):
-                            for err in errors:
-                                st.write(f"- {err['email']}: {err['message']}")
-
-                    if dry_run:
-                        st.info("Dry run completed - no emails were actually sent")
-                    else:
-                        st.success("Email sending completed!")
-                        st.rerun()
+            # Set sending state and trigger rerun to block UI
+            st.session_state.sending_emails = True
+            st.session_state.send_data = {
+                "recipient_ids": recipient_ids,
+                "subject": subject,
+                "dry_run": dry_run,
+            }
+            st.rerun()
 
 with tab2:
     st.header("Configuration")
@@ -577,12 +676,16 @@ with tab2:
     else:
         st.info("Upload your OAuth 2.0 credentials JSON file from Google Cloud Console")
 
-    credentials_file = st.file_uploader("Choose credentials file", type=["json"], key="creds")
+    credentials_file = st.file_uploader(
+        "Choose credentials file", type=["json"],
+        key=f"creds_{st.session_state.creds_upload_key}"
+    )
 
     if credentials_file:
         if st.button("Upload Credentials"):
             if upload_credentials(user_id, credentials_file):
                 st.success("Credentials uploaded successfully!")
+                st.session_state.creds_upload_key += 1
                 st.rerun()
             else:
                 st.error("Failed to upload credentials")
@@ -656,12 +759,16 @@ with tab2:
     else:
         st.info("Upload your resume PDF file")
 
-    resume_file = st.file_uploader("Choose resume PDF", type=["pdf"], key="resume_uploader")
+    resume_file = st.file_uploader(
+        "Choose resume PDF", type=["pdf"],
+        key=f"resume_{st.session_state.resume_upload_key}"
+    )
 
     if resume_file:
         if st.button("Upload Resume"):
             if upload_resume(user_id, resume_file):
                 st.success("Resume uploaded successfully!")
+                st.session_state.resume_upload_key += 1
                 st.rerun()
             else:
                 st.error("Failed to upload resume")
