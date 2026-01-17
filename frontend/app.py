@@ -745,9 +745,6 @@ with tab2:
         else:
             st.error("Resume: Missing")
 
-    if gmail_status["connected"] and gmail_status["email"]:
-        st.info(f"Connected as: {gmail_status['email']}")
-
     st.divider()
 
     # Credentials Upload Section
