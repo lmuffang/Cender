@@ -113,6 +113,18 @@ def complete_gmail_auth(user_id, auth_code):
         return False, str(e)
 
 
+def disconnect_gmail(user_id):
+    """Disconnect Gmail by removing the token"""
+    try:
+        response = requests.post(f"{BACKEND_URL}/users/{user_id}/gmail-disconnect")
+        if response.status_code == 200:
+            return True, response.json().get("message", "Disconnected!")
+        else:
+            return False, response.json().get("detail", "Disconnect failed")
+    except Exception as e:
+        return False, str(e)
+
+
 def get_files_status(user_id):
     """Check if credentials and resume are uploaded"""
     try:
@@ -307,10 +319,38 @@ with st.sidebar:
 
     if users:
         user_options = {f"{u['username']} ({u['email']})": u for u in users}
-        selected = st.selectbox("Select User", options=list(user_options.keys()), key="user_select")
+        option_keys = list(user_options.keys())
 
+        # Determine current index based on session state
+        current_index = 0
+        if st.session_state.current_user:
+            current_key = f"{st.session_state.current_user['username']} ({st.session_state.current_user['email']})"
+            if current_key in option_keys:
+                current_index = option_keys.index(current_key)
+
+        selected = st.selectbox(
+            "Select User",
+            options=option_keys,
+            index=current_index,
+            key="user_select"
+        )
+
+        # Update current_user based on selection
         if selected:
-            st.session_state.current_user = user_options[selected]
+            new_user = user_options[selected]
+            # Initialize if no user selected yet
+            if st.session_state.current_user is None:
+                st.session_state.current_user = new_user
+            # Handle user switch
+            elif st.session_state.current_user["id"] != new_user["id"]:
+                st.session_state.current_user = new_user
+                # Clear any pending operations when switching users
+                st.session_state.send_results = None
+                st.session_state.sending_emails = False
+                st.session_state.send_data = None
+                if "gmail_auth_url" in st.session_state:
+                    del st.session_state["gmail_auth_url"]
+                st.rerun()
 
     st.divider()
 
@@ -739,12 +779,22 @@ with tab2:
         st.info("Please upload credentials first")
     elif gmail_status["connected"]:
         st.success("Already connected!")
-        if st.button("Reconnect", help="Use this if you need to re-authorize"):
-            auth_url, error = get_gmail_auth_url(user_id)
-            if auth_url:
-                st.session_state["gmail_auth_url"] = auth_url
-            else:
-                st.error(f"Failed to get authorization URL: {error}")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Reconnect", help="Use this if you need to re-authorize"):
+                auth_url, error = get_gmail_auth_url(user_id)
+                if auth_url:
+                    st.session_state["gmail_auth_url"] = auth_url
+                else:
+                    st.error(f"Failed to get authorization URL: {error}")
+        with col2:
+            if st.button("Disconnect", help="Remove Gmail connection"):
+                success, message = disconnect_gmail(user_id)
+                if success:
+                    st.success(message)
+                    st.rerun()
+                else:
+                    st.error(message)
     else:
         if st.button("Connect to Gmail"):
             auth_url, error = get_gmail_auth_url(user_id)

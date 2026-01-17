@@ -189,3 +189,21 @@ class GmailAuthService:
         except Exception as e:
             logger.error(f"Failed to save resume for user {self.user_id}: {e}")
             return False, f"Failed to save resume: {str(e)}"
+
+    def disconnect_gmail(self) -> tuple[bool, str]:
+        """
+        Disconnect Gmail by deleting the token file.
+
+        Returns:
+            Tuple of (success, message)
+        """
+        if not os.path.exists(self.token_path):
+            return True, "Gmail was not connected"
+
+        try:
+            os.remove(self.token_path)
+            logger.info(f"Gmail disconnected for user {self.user_id}")
+            return True, "Gmail disconnected successfully"
+        except OSError as e:
+            logger.error(f"Failed to disconnect Gmail for user {self.user_id}: {e}")
+            return False, f"Failed to disconnect: {str(e)}"

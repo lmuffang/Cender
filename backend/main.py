@@ -296,6 +296,25 @@ async def complete_gmail_auth(
     return {"message": message}
 
 
+@app.post("/users/{user_id}/gmail-disconnect")
+async def disconnect_gmail(user_id: int, db: Session = Depends(get_db)):
+    """
+    Disconnect Gmail by removing the token.
+    User will need to re-authorize to send emails.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    success, message = gmail_service.disconnect_gmail()
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    return {"message": message}
+
+
 @app.post("/users/{user_id}/resume")
 async def upload_resume(user_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload resume PDF for a user"""
