@@ -2,6 +2,7 @@
 
 import os
 from dataclasses import dataclass
+from urllib.parse import urlparse, parse_qs
 
 from config import settings
 from gmail_service import (
@@ -81,12 +82,49 @@ class GmailAuthService:
             logger.error(f"Failed to generate auth URL for user {self.user_id}: {e}")
             return None, f"Failed to generate auth URL: {str(e)}"
 
-    def complete_auth(self, auth_code: str) -> tuple[bool, str]:
+    @staticmethod
+    def extract_auth_code(input_str: str) -> tuple[str | None, str | None]:
         """
-        Complete OAuth flow with authorization code.
+        Extract authorization code from user input.
+
+        Accepts either:
+        - A full redirect URL like http://localhost/?code=4/0ABC...&scope=...
+        - Just the authorization code itself
 
         Args:
-            auth_code: Authorization code from OAuth redirect
+            input_str: User input (URL or code)
+
+        Returns:
+            Tuple of (auth_code, error_message)
+        """
+        input_str = input_str.strip()
+
+        if not input_str:
+            return None, "No input provided"
+
+        # Check if it looks like a URL
+        if input_str.startswith("http://") or input_str.startswith("https://"):
+            try:
+                parsed = urlparse(input_str)
+                query_params = parse_qs(parsed.query)
+
+                if "code" in query_params:
+                    code = query_params["code"][0]
+                    return code, None
+                else:
+                    return None, "URL does not contain an authorization code. Make sure you copied the full redirect URL."
+            except Exception as e:
+                return None, f"Failed to parse URL: {str(e)}"
+
+        # Assume it's a raw authorization code
+        return input_str, None
+
+    def complete_auth(self, auth_input: str) -> tuple[bool, str]:
+        """
+        Complete OAuth flow with authorization code or redirect URL.
+
+        Args:
+            auth_input: Authorization code or full redirect URL
 
         Returns:
             Tuple of (success, message)
@@ -94,10 +132,15 @@ class GmailAuthService:
         if not os.path.exists(self.credentials_path):
             return False, "Credentials file not uploaded. Please upload credentials.json first."
 
+        # Extract authorization code from input
+        auth_code, error = self.extract_auth_code(auth_input)
+        if error:
+            return False, error
+
         try:
             complete_authorization(
                 credentials_path=self.credentials_path,
-                auth_code=auth_code.strip(),
+                auth_code=auth_code,
                 token_path=self.token_path,
                 redirect_uri="http://localhost"
             )

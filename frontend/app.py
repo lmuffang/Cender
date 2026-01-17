@@ -617,17 +617,19 @@ with tab2:
 
         st.markdown("**Step 2:** Sign in and authorize the application")
 
-        st.markdown("**Step 3:** After authorizing, you'll be redirected to a page that won't load. "
-                   "Copy the `code` parameter from the URL.")
-        st.info("The URL will look like: `http://localhost/?code=4/0ABC...&scope=...`\n\n"
-               "Copy everything between `code=` and `&scope`")
+        st.markdown("**Step 3:** After authorizing, you'll be redirected to a page that shows an error "
+                   "(this is expected). **Copy the entire URL** from your browser's address bar.")
+        st.info("The URL will look like:\n\n"
+               "`http://localhost/?state=...&code=4/0ABC...&scope=...`\n\n"
+               "Just copy the **entire URL** - we'll extract the code automatically!")
 
-        st.markdown("**Step 4:** Paste the authorization code below:")
-        auth_code = st.text_input("Authorization code", key="gmail_auth_code", type="password")
+        st.markdown("**Step 4:** Paste the full redirect URL below:")
+        auth_code = st.text_input("Redirect URL", key="gmail_auth_code",
+                                  placeholder="http://localhost/?state=...&code=...&scope=...")
 
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("Submit Code", type="primary"):
+            if st.button("Connect Gmail", type="primary"):
                 if auth_code:
                     success, message = complete_gmail_auth(user_id, auth_code)
                     if success:
@@ -637,9 +639,9 @@ with tab2:
                             del st.session_state["gmail_auth_code"]
                         st.rerun()
                     else:
-                        st.error(f"Authorization failed: {message}")
+                        st.error(message)
                 else:
-                    st.warning("Please enter the authorization code")
+                    st.warning("Please paste the redirect URL")
         with col2:
             if st.button("Cancel"):
                 del st.session_state["gmail_auth_url"]
