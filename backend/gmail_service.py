@@ -145,11 +145,11 @@ def check_gmail_connection(credentials_path: str, token_path: str) -> dict:
                 result["error"] = "Token expired and cannot be refreshed"
                 return result
 
-        # Try to get user profile to verify connection
-        service = build("gmail", "v1", credentials=creds)
-        profile = service.users().getProfile(userId="me").execute()
+        # Token is valid - we're connected
+        # Note: We don't call getProfile() as it requires additional scopes
+        # The gmail.send scope is sufficient for sending emails
         result["connected"] = True
-        result["email"] = profile.get("emailAddress")
+        result["email"] = "(connected - send scope only)"
 
     except Exception as e:
         result["error"] = str(e)
