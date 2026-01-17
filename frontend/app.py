@@ -51,6 +51,55 @@ def upload_credentials(user_id, file):
         return False
 
 
+def get_gmail_status(user_id):
+    """Check Gmail connection status"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/users/{user_id}/gmail-status")
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return {"connected": False, "has_credentials": False, "has_token": False, "email": None, "error": "Failed to check status"}
+
+
+def get_gmail_auth_url(user_id):
+    """Get Gmail OAuth authorization URL"""
+    try:
+        response = requests.post(f"{BACKEND_URL}/users/{user_id}/gmail-auth-url")
+        if response.status_code == 200:
+            return response.json().get("auth_url"), None
+        else:
+            return None, response.json().get("detail", "Failed to get auth URL")
+    except Exception as e:
+        return None, str(e)
+
+
+def complete_gmail_auth(user_id, auth_code):
+    """Complete Gmail OAuth with authorization code"""
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/users/{user_id}/gmail-auth-complete",
+            json={"auth_code": auth_code}
+        )
+        if response.status_code == 200:
+            return True, response.json().get("message", "Connected!")
+        else:
+            return False, response.json().get("detail", "Authorization failed")
+    except Exception as e:
+        return False, str(e)
+
+
+def get_files_status(user_id):
+    """Check if credentials and resume are uploaded"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/users/{user_id}/files-status")
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return {"has_credentials": False, "has_resume": False}
+
+
 def upload_resume(user_id, file):
     """Upload resume PDF"""
     try:
@@ -488,26 +537,130 @@ with tab1:
 with tab2:
     st.header("Configuration")
 
-    st.subheader("📁 Upload Gmail Credentials")
-    st.info("Upload your OAuth 2.0 credentials JSON file from Google Cloud Console")
+    # Get status information
+    gmail_status = get_gmail_status(user_id)
+    files_status = get_files_status(user_id)
+
+    # Setup Status Overview
+    st.subheader("Setup Status")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if files_status["has_credentials"]:
+            st.success("Credentials: Uploaded")
+        else:
+            st.error("Credentials: Missing")
+
+    with col2:
+        if gmail_status["connected"]:
+            st.success(f"Gmail: Connected")
+        elif gmail_status["has_credentials"]:
+            st.warning("Gmail: Not authorized")
+        else:
+            st.error("Gmail: Not connected")
+
+    with col3:
+        if files_status["has_resume"]:
+            st.success("Resume: Uploaded")
+        else:
+            st.error("Resume: Missing")
+
+    if gmail_status["connected"] and gmail_status["email"]:
+        st.info(f"Connected as: {gmail_status['email']}")
+
+    st.divider()
+
+    # Credentials Upload Section
+    st.subheader("1. Upload Gmail Credentials")
+    if files_status["has_credentials"]:
+        st.success("Credentials file already uploaded. Upload again to replace.")
+    else:
+        st.info("Upload your OAuth 2.0 credentials JSON file from Google Cloud Console")
+
     credentials_file = st.file_uploader("Choose credentials file", type=["json"], key="creds")
 
     if credentials_file:
         if st.button("Upload Credentials"):
             if upload_credentials(user_id, credentials_file):
                 st.success("Credentials uploaded successfully!")
+                st.rerun()
             else:
                 st.error("Failed to upload credentials")
 
     st.divider()
 
-    st.subheader("📄 Upload Resume")
+    # OAuth Authorization Section
+    st.subheader("2. Connect to Gmail")
+    if not files_status["has_credentials"]:
+        st.info("Please upload credentials first")
+    elif gmail_status["connected"]:
+        st.success("Already connected!")
+        if st.button("Reconnect", help="Use this if you need to re-authorize"):
+            auth_url, error = get_gmail_auth_url(user_id)
+            if auth_url:
+                st.session_state["gmail_auth_url"] = auth_url
+            else:
+                st.error(f"Failed to get authorization URL: {error}")
+    else:
+        if st.button("Connect to Gmail"):
+            auth_url, error = get_gmail_auth_url(user_id)
+            if auth_url:
+                st.session_state["gmail_auth_url"] = auth_url
+            else:
+                st.error(f"Failed to get authorization URL: {error}")
+
+    # Show authorization flow if URL is available
+    if "gmail_auth_url" in st.session_state:
+        st.markdown("---")
+        st.markdown("**Step 1:** Open this URL in your browser:")
+        st.code(st.session_state["gmail_auth_url"], language=None)
+
+        st.markdown("**Step 2:** Sign in and authorize the application")
+
+        st.markdown("**Step 3:** After authorizing, you'll be redirected to a page that won't load. "
+                   "Copy the `code` parameter from the URL.")
+        st.info("The URL will look like: `http://localhost/?code=4/0ABC...&scope=...`\n\n"
+               "Copy everything between `code=` and `&scope`")
+
+        st.markdown("**Step 4:** Paste the authorization code below:")
+        auth_code = st.text_input("Authorization code", key="gmail_auth_code", type="password")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Submit Code", type="primary"):
+                if auth_code:
+                    success, message = complete_gmail_auth(user_id, auth_code)
+                    if success:
+                        st.success(message)
+                        del st.session_state["gmail_auth_url"]
+                        if "gmail_auth_code" in st.session_state:
+                            del st.session_state["gmail_auth_code"]
+                        st.rerun()
+                    else:
+                        st.error(f"Authorization failed: {message}")
+                else:
+                    st.warning("Please enter the authorization code")
+        with col2:
+            if st.button("Cancel"):
+                del st.session_state["gmail_auth_url"]
+                st.rerun()
+
+    st.divider()
+
+    # Resume Upload Section
+    st.subheader("3. Upload Resume")
+    if files_status["has_resume"]:
+        st.success("Resume already uploaded. Upload again to replace.")
+    else:
+        st.info("Upload your resume PDF file")
+
     resume_file = st.file_uploader("Choose resume PDF", type=["pdf"], key="resume_uploader")
 
     if resume_file:
         if st.button("Upload Resume"):
             if upload_resume(user_id, resume_file):
                 st.success("Resume uploaded successfully!")
+                st.rerun()
             else:
                 st.error("Failed to upload resume")
 
@@ -592,10 +745,13 @@ with tab3:
         if "sent_at" in logs_df.columns:
             logs_df["sent_at"] = pd.to_datetime(logs_df["sent_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Add delete button for each log
+        # Display logs table
         st.dataframe(
-            logs_df[["id", "email", "subject", "status", "sent_at", "error_message"]],
+            logs_df[["id", "recipient_email", "subject", "status", "sent_at", "error_message"]],
             use_container_width=True,
+            column_config={
+                "recipient_email": "Email",
+            }
         )
 
         # Delete individual log
