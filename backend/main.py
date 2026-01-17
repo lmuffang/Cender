@@ -511,6 +511,25 @@ async def import_recipients_csv(
         )
 
 
+@app.delete("/users/{user_id}/recipients")
+async def delete_user_recipients(user_id: int, db: Session = Depends(get_db)):
+    """
+    Remove all recipients from a user.
+
+    This unlinks the recipients from the user but does not delete the
+    recipients themselves (they may be linked to other users).
+    """
+    try:
+        recipient_service = RecipientService(db)
+        count = recipient_service.unlink_all_from_user(user_id)
+        return {
+            "message": f"Removed {count} recipients from user",
+            "count": count,
+        }
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ============================================================================
 # EMAIL OPERATIONS
 # ============================================================================

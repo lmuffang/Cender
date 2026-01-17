@@ -308,6 +308,18 @@ def delete_email_log(user_id, log_id):
         return False
 
 
+def delete_all_recipients(user_id):
+    """Delete all recipients for a user"""
+    try:
+        response = requests.delete(f"{BACKEND_URL}/users/{user_id}/recipients")
+        if response.status_code == 200:
+            return True, response.json()
+        else:
+            return False, response.json().get("detail", "Failed to delete recipients")
+    except Exception as e:
+        return False, str(e)
+
+
 # Main UI
 st.title("📧 Cender")
 
@@ -860,6 +872,32 @@ with tab2:
                 st.rerun()
             else:
                 st.error("Failed to upload resume")
+
+    st.divider()
+
+    # Delete Recipients Section
+    st.subheader("4. Manage Recipients")
+    recipients_count = len(fetch_recipients(user_id))
+    st.info(f"You have **{recipients_count}** recipients linked to your account.")
+
+    with st.expander("Remove All Recipients", expanded=False):
+        st.warning(
+            "This will remove all recipients from your account. "
+            "The recipients themselves are not deleted (they may be used by other users)."
+        )
+
+        confirm_delete = st.checkbox(
+            "I understand this will remove all my recipients",
+            key="confirm_delete_recipients"
+        )
+
+        if st.button("Remove All Recipients", type="primary", disabled=not confirm_delete):
+            success, result = delete_all_recipients(user_id)
+            if success:
+                st.success(f"Removed {result.get('count', 0)} recipients from your account.")
+                st.rerun()
+            else:
+                st.error(f"Failed to remove recipients: {result}")
 
 with tab3:
     st.header("Email History")
