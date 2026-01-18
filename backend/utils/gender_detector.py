@@ -25,10 +25,10 @@ def guess_salutation(first_name: str | None) -> str:
         first_name: First name of the recipient
 
     Returns:
-        Salutation string ("Monsieur" or "Madame")
+        Salutation string ("Monsieur", "Madame", or "Madame, Monsieur" when uncertain)
     """
     if not first_name:
-        return "Monsieur"
+        return "Madame, Monsieur"
 
     detector = get_detector()
     g = detector.get_gender(first_name)
@@ -38,4 +38,4 @@ def guess_salutation(first_name: str | None) -> str:
     elif g in ("female", "mostly_female"):
         return "Madame"
 
-    return "Monsieur"
+    return "Madame, Monsieur"

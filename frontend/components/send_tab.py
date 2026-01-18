@@ -19,14 +19,35 @@ def render(api: APIClient, user_id: int):
         "Email Subject", placeholder="Candidature spontanée", value=subject, key="email_subject"
     )
 
-    # Template editor
+    # Template mode selection
     st.subheader("Email Template")
-    template_content = st.text_area(
-        "Template (use {salutation} and {company} as placeholders)",
-        value=template_content,
-        height=200,
-        key="template_content",
-    )
+
+    # Check Ollama availability
+    ollama_status = api.get_ollama_status().data
+    ai_available = ollama_status.get("available", False) and ollama_status.get("model_loaded", False)
+
+    if ai_available:
+        template_mode = st.radio(
+            "Template Mode",
+            options=["Manual", "AI-Generated"],
+            horizontal=True,
+            key="template_mode",
+            help="Use AI to generate a personalized French job application email"
+        )
+    else:
+        template_mode = "Manual"
+        if ollama_status.get("error"):
+            st.info(f"AI generation unavailable: {ollama_status.get('error')}")
+
+    if template_mode == "AI-Generated":
+        template_content = _render_ai_template_section(api, user_id, template_content, subject)
+    else:
+        template_content = st.text_area(
+            "Template (use {salutation} and {company} as placeholders)",
+            value=template_content,
+            height=200,
+            key="template_content",
+        )
 
     col_save, col_info = st.columns([1, 3])
     with col_save:
@@ -46,6 +67,71 @@ def render(api: APIClient, user_id: int):
 
     # Display recipients
     _render_recipients(api, user_id, template_content, subject)
+
+
+def _render_ai_template_section(api: APIClient, user_id: int, current_template: str, subject: str) -> str:
+    """Render the AI template generation section."""
+    # Initialize session state for AI template
+    if "ai_generated_template" not in st.session_state:
+        st.session_state.ai_generated_template = None
+    if "ai_generating" not in st.session_state:
+        st.session_state.ai_generating = False
+
+    # User context input
+    user_context = st.text_area(
+        "Context about yourself (optional)",
+        placeholder="Ex: Développeur Python avec 5 ans d'expérience, spécialisé en data science...",
+        height=100,
+        key="ai_user_context",
+        help="Describe your skills, experience, or what makes you a good candidate"
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        generate_clicked = st.button(
+            "🤖 Generate Template",
+            use_container_width=True,
+            disabled=st.session_state.ai_generating
+        )
+    with col2:
+        regenerate_clicked = st.button(
+            "🔄 Regenerate",
+            use_container_width=True,
+            disabled=st.session_state.ai_generating or st.session_state.ai_generated_template is None
+        )
+
+    # Handle generation
+    if generate_clicked or regenerate_clicked:
+        st.session_state.ai_generating = True
+        with st.spinner("Generating template with AI... This may take a moment."):
+            result = api.generate_ai_template(user_id, user_context if user_context else None)
+            if result.success:
+                st.session_state.ai_generated_template = result.data.get("content", "")
+                st.session_state.ai_generated_subject = result.data.get("subject", "")
+                st.success(f"Template generated using {result.data.get('model_used', 'AI')}")
+            else:
+                st.error(f"Failed to generate template: {result.error}")
+        st.session_state.ai_generating = False
+        st.rerun()
+
+    # Display generated template or current template in editable area
+    if st.session_state.ai_generated_template:
+        template_to_show = st.session_state.ai_generated_template
+    else:
+        template_to_show = current_template
+
+    template_content = st.text_area(
+        "Generated Template (editable - use {salutation} and {company} as placeholders)",
+        value=template_to_show,
+        height=250,
+        key="ai_template_content",
+    )
+
+    # Update session state if user edits
+    if template_content != st.session_state.ai_generated_template:
+        st.session_state.ai_generated_template = template_content
+
+    return template_content
 
 
 def _render_csv_upload(api: APIClient, user_id: int):

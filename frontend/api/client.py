@@ -20,9 +20,11 @@ class APIClient:
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")
 
-    def _request(self, method: str, path: str, **kwargs) -> Result:
+    def _request(self, method: str, path: str, timeout: int | None = None, **kwargs) -> Result:
         """Make an HTTP request and return a Result."""
         try:
+            if timeout:
+                kwargs["timeout"] = timeout
             response = requests.request(method, f"{self.base_url}{path}", **kwargs)
             if response.status_code in (200, 201):
                 try:
@@ -220,3 +222,21 @@ class APIClient:
     def delete_email_log(self, user_id: int, log_id: int) -> Result:
         """Delete a specific email log."""
         return self._request("DELETE", f"/users/{user_id}/email-logs/{log_id}")
+
+    # Ollama AI endpoints
+    def get_ollama_status(self) -> Result:
+        """Check Ollama AI availability."""
+        result = self._request("GET", "/ollama/status")
+        if not result.success:
+            return Result(
+                success=True,
+                data={"available": False, "model": "", "model_loaded": False, "error": result.error}
+            )
+        return result
+
+    def generate_ai_template(self, user_id: int, user_context: str | None = None) -> Result:
+        """Generate an AI email template."""
+        payload = {}
+        if user_context:
+            payload["user_context"] = user_context
+        return self._request("POST", f"/users/{user_id}/generate-ai-template", json=payload, timeout=150)

@@ -78,3 +78,20 @@ class SendEmailsRequest(BaseModel):
 
 class GmailAuthCompleteRequest(BaseModel):
     auth_code: str
+
+
+class AITemplateRequest(BaseModel):
+    user_context: str | None = None
+
+
+class AITemplateResponse(BaseModel):
+    content: str
+    subject: str
+    model_used: str
+
+
+class OllamaStatusResponse(BaseModel):
+    available: bool
+    model: str
+    model_loaded: bool
+    error: str | None = None

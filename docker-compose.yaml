@@ -1,23 +1,65 @@
 services:
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_MODEL=mistral:7b-instruct-q4_0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until curl -s http://localhost:11434/api/tags > /dev/null 2>&1; do
+          echo "Waiting for Ollama to start..."
+          sleep 2
+        done
+        echo "Pulling model $${OLLAMA_MODEL}..."
+        ollama pull $${OLLAMA_MODEL}
+        echo "Model ready!"
+        wait
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   backend:
+    image: loumfg/cender-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+
     ports:
       - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./credentials:/app/credentials
       - ./backend/alembic:/app/alembic
+
     environment:
       - DATABASE_URL=sqlite:///./data/app.db
       - PYTHONUNBUFFERED=1
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=mistral:7b-instruct-q4_0
+    depends_on:
+      ollama:
+        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
+    image: loumfg/cender-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      platforms: 
+       - linux/amd64
+       - linux/arm64
     ports:
       - "8501:8501"
     environment:
@@ -27,6 +69,7 @@ services:
     command: streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 
   pytest:
+    image: loumfg/cender-pytest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -39,3 +82,6 @@ services:
     command: pytest tests/ -v --tb=short
     profiles:
       - testing
+
+volumes:
+  ollama_data:

@@ -53,3 +53,9 @@ class GmailAuthError(CVEmailSenderError):
     """Raised for Gmail authentication failures."""
 
     pass
+
+
+class OllamaError(CVEmailSenderError):
+    """Raised when Ollama AI service fails."""
+
+    pass

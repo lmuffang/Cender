@@ -11,6 +11,7 @@ from exceptions import (
     GmailAuthError,
     InvalidCredentialsError,
     CSVParseError,
+    OllamaError,
 )
 
 
@@ -44,6 +45,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(CSVParseError)
     async def csv_parse_error_handler(request: Request, exc: CSVParseError):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.exception_handler(OllamaError)
+    async def ollama_error_handler(request: Request, exc: OllamaError):
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
 
     @app.exception_handler(ValueError)
     async def value_error_handler(request: Request, exc: ValueError):

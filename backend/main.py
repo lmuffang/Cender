@@ -7,7 +7,7 @@ from database import engine, Base
 from config import settings
 from utils.logger import logger
 from api.exception_handlers import register_exception_handlers
-from api.routers import users, gmail, templates, recipients, emails
+from api.routers import users, gmail, templates, recipients, emails, ollama
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -36,6 +36,7 @@ app.include_router(gmail.router)
 app.include_router(templates.router)
 app.include_router(recipients.router)
 app.include_router(emails.router)
+app.include_router(ollama.router)
 
 logger.info(f"Starting {settings.app_name} v{settings.app_version}")
 
