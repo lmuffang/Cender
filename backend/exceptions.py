@@ -41,3 +41,15 @@ class CSVParseError(CVEmailSenderError):
     """Raised when CSV parsing fails."""
 
     pass
+
+
+class ValidationError(CVEmailSenderError):
+    """Raised for duplicate/conflict errors (409)."""
+
+    pass
+
+
+class GmailAuthError(CVEmailSenderError):
+    """Raised for Gmail authentication failures."""
+
+    pass

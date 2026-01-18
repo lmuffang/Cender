@@ -7,7 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
 from database import Base, User, Recipient, Template, EmailLog, EmailStatus
-from main import app, get_db
+from main import app
+from api.dependencies import get_db
 
 
 @pytest.fixture(scope="function")
