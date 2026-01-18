@@ -124,3 +124,26 @@ class RecipientService:
             user.recipients.append(recipient)
             self.db.commit()
             logger.info(f"Linked recipient {recipient_id} to user {user_id}")
+
+    def unlink_all_from_user(self, user_id: int) -> int:
+        """
+        Unlink all recipients from a user.
+
+        This removes the user-recipient associations but does not delete
+        the recipients themselves (they may be linked to other users).
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Number of recipients unlinked
+
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        user = self.user_service.get_by_id(user_id)
+        count = len(user.recipients)
+        user.recipients.clear()
+        self.db.commit()
+        logger.info(f"Unlinked {count} recipients from user {user_id}")
+        return count
