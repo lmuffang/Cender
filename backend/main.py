@@ -1,4 +1,3 @@
-import os
 import json
 import datetime
 import traceback
@@ -27,6 +26,7 @@ from services.user_service import UserService
 from services.template_service import TemplateService
 from services.recipient_service import RecipientService
 from services.email_service import EmailService
+from services.gmail_auth_service import GmailAuthService
 from utils.gender_detector import guess_salutation
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -174,6 +174,25 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@app.delete("/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a user and all associated data.
+
+    This will permanently delete:
+    - User's email template
+    - User's email logs
+    - User's recipient links (recipients themselves are kept)
+    - User's files (credentials, token, resume)
+    """
+    try:
+        user_service = UserService(db)
+        result = user_service.delete(user_id)
+        return result
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ============================================================================
 # USER-SPECIFIC RESOURCES (Credentials, Resume)
 # ============================================================================
@@ -186,14 +205,114 @@ async def upload_credentials(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    os.makedirs("./credentials", exist_ok=True)
-    credentials_path = settings.get_credentials_path(user_id)
+    gmail_service = GmailAuthService(user_id)
+    content = await file.read()
+    success, message = gmail_service.save_credentials(content)
 
-    with open(credentials_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    if not success:
+        raise HTTPException(status_code=500, detail=message)
 
-    return {"message": "Credentials uploaded successfully"}
+    return {"message": message}
+
+
+@app.get("/users/{user_id}/files-status")
+async def get_files_status(user_id: int, db: Session = Depends(get_db)):
+    """Check if user has uploaded credentials and resume"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    status = gmail_service.get_files_status()
+
+    return {
+        "has_credentials": status.has_credentials,
+        "has_resume": status.has_resume,
+    }
+
+
+@app.get("/users/{user_id}/gmail-status")
+async def get_gmail_status(user_id: int, db: Session = Depends(get_db)):
+    """Check Gmail connection status for a user"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    status = gmail_service.get_gmail_status()
+
+    return {
+        "connected": status.connected,
+        "has_credentials": status.has_credentials,
+        "has_token": status.has_token,
+        "email": status.email,
+        "error": status.error,
+    }
+
+
+@app.post("/users/{user_id}/gmail-auth-url")
+async def get_gmail_auth_url(user_id: int, db: Session = Depends(get_db)):
+    """
+    Get OAuth authorization URL for manual flow.
+    User should open this URL in their browser and paste the authorization code back.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    auth_url, error = gmail_service.get_auth_url()
+
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+
+    return {"auth_url": auth_url}
+
+
+class GmailAuthCompleteRequest(BaseModel):
+    auth_code: str
+
+
+@app.post("/users/{user_id}/gmail-auth-complete")
+async def complete_gmail_auth(
+    user_id: int,
+    request: GmailAuthCompleteRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Complete OAuth flow with authorization code.
+    The user pastes the code they received after authorizing.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    success, message = gmail_service.complete_auth(request.auth_code)
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    return {"message": message}
+
+
+@app.post("/users/{user_id}/gmail-disconnect")
+async def disconnect_gmail(user_id: int, db: Session = Depends(get_db)):
+    """
+    Disconnect Gmail by removing the token.
+    User will need to re-authorize to send emails.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    gmail_service = GmailAuthService(user_id)
+    success, message = gmail_service.disconnect_gmail()
+
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    return {"message": message}
 
 
 @app.post("/users/{user_id}/resume")
@@ -206,14 +325,14 @@ async def upload_resume(user_id: int, file: UploadFile = File(...), db: Session 
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
-    os.makedirs("./data", exist_ok=True)
-    resume_path = settings.get_resume_path(user_id)
+    gmail_service = GmailAuthService(user_id)
+    content = await file.read()
+    success, message = gmail_service.save_resume(content)
 
-    with open(resume_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    if not success:
+        raise HTTPException(status_code=500, detail=message)
 
-    return {"message": "Resume uploaded successfully"}
+    return {"message": message}
 
 
 # ============================================================================

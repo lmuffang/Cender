@@ -1,7 +1,9 @@
 """User service layer."""
 
+import os
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import User
 from exceptions import UserNotFoundError
 from utils.logger import logger
@@ -77,3 +79,63 @@ class UserService:
             User instance or None if not found
         """
         return self.db.query(User).filter(User.email == email).first()
+
+    def delete(self, user_id: int) -> dict:
+        """
+        Delete a user and all associated data.
+
+        This will delete:
+        - User's template (CASCADE)
+        - User's recipient links (CASCADE, recipients themselves are kept)
+        - User's email logs (CASCADE)
+        - User's files (credentials, token, resume)
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Dict with deletion summary
+
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        user = self.get_by_id(user_id)
+        username = user.username
+
+        # Count related data before deletion
+        email_logs_count = len(user.emails) if user.emails else 0
+        has_template = user.template is not None
+        recipients_count = len(user.recipients) if user.recipients else 0
+
+        # Delete user files
+        files_deleted = []
+        files_to_delete = [
+            settings.get_credentials_path(user_id),
+            settings.get_token_path(user_id),
+            settings.get_resume_path(user_id),
+        ]
+
+        for file_path in files_to_delete:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    files_deleted.append(os.path.basename(file_path))
+                    logger.info(f"Deleted file: {file_path}")
+                except OSError as e:
+                    logger.error(f"Failed to delete file {file_path}: {e}")
+
+        # Delete user (cascades to template, email_logs, user_recipients)
+        self.db.delete(user)
+        self.db.commit()
+
+        logger.info(f"Deleted user {user_id} ({username}) and all associated data")
+
+        return {
+            "message": f"User '{username}' deleted successfully",
+            "deleted": {
+                "email_logs": email_logs_count,
+                "template": has_template,
+                "recipient_links": recipients_count,
+                "files": files_deleted,
+            },
+        }
