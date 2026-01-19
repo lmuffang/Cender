@@ -154,6 +154,11 @@ def _render_preview(api: APIClient, user_id: int, displayed_recipients: list, su
                     disabled=True,
                     key="preview_body",
                 )
+                attachment = result.data.get("attachment_filename")
+                if attachment:
+                    st.caption(f"📎 Attachment: {attachment}")
+                else:
+                    st.caption("⚠️ No resume attached")
             else:
                 st.warning("Could not generate preview. Make sure template is saved.")
         else:

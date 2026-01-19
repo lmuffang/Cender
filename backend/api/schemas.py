@@ -55,6 +55,7 @@ class EmailPreview(BaseModel):
     email: str
     subject: str
     body: str
+    attachment_filename: str | None = None
 
 
 class EmailLogResponse(BaseModel):

@@ -1,9 +1,12 @@
 """Email sending and logging endpoints."""
 
+import os
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import EmailStatus
 from api.schemas import EmailPreview, EmailLogResponse, SendEmailsRequest
 from api.dependencies import get_db, get_user_service, get_template_service, get_recipient_service, get_email_service
@@ -46,10 +49,15 @@ async def preview_email(
     company = recipient.company or ""
     body = template.content.format(salutation=salutation, company=company, company_name=company)
 
+    # Get resume filename if available
+    resume_path = settings.get_resume_path(user_id)
+    attachment_filename = os.path.basename(resume_path) if resume_path else None
+
     return EmailPreview(
         email=recipient.email,
         subject=subject,
         body=body,
+        attachment_filename=attachment_filename,
     )
 
 
