@@ -165,7 +165,7 @@ def create_message(
     msg["To"] = to_email
     msg["Subject"] = subject
 
-    body = template.format(salutation=salutation, company=company)
+    body = template.format(salutation=salutation, company=company, company_name=company)
     msg.attach(MIMEText(body, "plain"))
 
     with open(resume_path, "rb") as attachment:

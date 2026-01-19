@@ -44,7 +44,7 @@ async def preview_email(
         salutation = salutation_text
 
     company = recipient.company or ""
-    body = template.content.format(salutation=salutation, company=company)
+    body = template.content.format(salutation=salutation, company=company, company_name=company)
 
     return EmailPreview(
         email=recipient.email,

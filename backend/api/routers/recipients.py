@@ -77,6 +77,12 @@ async def import_recipients_csv(
                     value = ""  # is empty, NaN
                 recipient_data[key] = value.strip()
 
+            # Support "Company Name" as an alternative to "Company"
+            if not recipient_data["Company"]:
+                company_name = row.get("Company Name")
+                if isinstance(company_name, str) and company_name:
+                    recipient_data["Company"] = company_name.strip()
+
             # Find existing recipient
             recipient = db.query(Recipient).filter(Recipient.email == email).one_or_none()
 
