@@ -39,15 +39,20 @@ class GmailAuthService:
         self.user_id = user_id
         self.credentials_path = settings.get_credentials_path(user_id)
         self.token_path = settings.get_token_path(user_id)
-        self.resume_path = settings.get_resume_path(user_id)
+        self.user_data_dir = settings.get_user_data_dir(user_id)
+
+    def _get_resume_path(self) -> str | None:
+        """Get current resume path (dynamically finds PDF in user folder)."""
+        return settings.get_resume_path(self.user_id)
 
     def get_files_status(self) -> UserFilesStatus:
         """Check if user has uploaded credentials and resume."""
+        resume_path = self._get_resume_path()
         return UserFilesStatus(
             has_credentials=os.path.exists(self.credentials_path),
-            has_resume=os.path.exists(self.resume_path),
+            has_resume=resume_path is not None,
             credentials_path=self.credentials_path,
-            resume_path=self.resume_path,
+            resume_path=resume_path or "",
         )
 
     def get_gmail_status(self) -> GmailStatus:
@@ -170,21 +175,31 @@ class GmailAuthService:
             logger.error(f"Failed to save credentials for user {self.user_id}: {e}")
             return False, f"Failed to save credentials: {str(e)}"
 
-    def save_resume(self, content: bytes) -> tuple[bool, str]:
+    def save_resume(self, content: bytes, filename: str) -> tuple[bool, str]:
         """
-        Save resume file.
+        Save resume file with original filename.
 
         Args:
             content: File content bytes
+            filename: Original filename to preserve
 
         Returns:
             Tuple of (success, message)
         """
         try:
-            os.makedirs(os.path.dirname(self.resume_path), exist_ok=True)
-            with open(self.resume_path, "wb") as f:
+            # Create user data directory
+            os.makedirs(self.user_data_dir, exist_ok=True)
+
+            # Delete any existing PDFs in user folder
+            existing_resume = self._get_resume_path()
+            if existing_resume and os.path.exists(existing_resume):
+                os.remove(existing_resume)
+
+            # Save with original filename
+            resume_path = os.path.join(self.user_data_dir, filename)
+            with open(resume_path, "wb") as f:
                 f.write(content)
-            logger.info(f"Resume saved for user {self.user_id}")
+            logger.info(f"Resume saved for user {self.user_id}: {filename}")
             return True, "Resume uploaded successfully"
         except Exception as e:
             logger.error(f"Failed to save resume for user {self.user_id}: {e}")

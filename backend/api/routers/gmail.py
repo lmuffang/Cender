@@ -132,7 +132,7 @@ async def upload_resume(user_id: int, file: UploadFile = File(...), db: Session 
 
     gmail_service = get_gmail_auth_service(user_id)
     content = await file.read()
-    success, message = gmail_service.save_resume(content)
+    success, message = gmail_service.save_resume(content, file.filename)
 
     if not success:
         raise HTTPException(status_code=500, detail=message)

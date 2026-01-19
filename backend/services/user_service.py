@@ -1,6 +1,8 @@
 """User service layer."""
 
 import os
+import shutil
+
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -116,13 +118,23 @@ class UserService:
         ]
 
         for file_path in files_to_delete:
-            if os.path.exists(file_path):
+            if file_path and os.path.exists(file_path):
                 try:
                     os.remove(file_path)
                     files_deleted.append(os.path.basename(file_path))
                     logger.info(f"Deleted file: {file_path}")
                 except OSError as e:
                     logger.error(f"Failed to delete file {file_path}: {e}")
+
+        # Also delete user data directory if it exists
+        user_data_dir = settings.get_user_data_dir(user_id)
+        if os.path.exists(user_data_dir):
+            try:
+                shutil.rmtree(user_data_dir)
+                files_deleted.append(f"user_{user_id}/")
+                logger.info(f"Deleted user data directory: {user_data_dir}")
+            except OSError as e:
+                logger.error(f"Failed to delete user data directory {user_data_dir}: {e}")
 
         # Delete user (cascades to template, email_logs, user_recipients)
         self.db.delete(user)

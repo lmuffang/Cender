@@ -57,7 +57,7 @@ class EmailService:
             yield json.dumps({"error": "Gmail credentials not uploaded"}) + "\n"
             return
 
-        if not os.path.exists(resume_path):
+        if not resume_path:
             logger.error(f"Resume not found for user {user_id}")
             yield json.dumps({"error": "Resume not uploaded"}) + "\n"
             return
