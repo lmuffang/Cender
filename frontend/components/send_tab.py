@@ -176,7 +176,7 @@ def _render_send_button(
     template_content: str,
     dry_run: bool
 ):
-    """Render the send emails button with validation."""
+    """Render the send emails button with validation and inline sending."""
     if st.button("📧 Send Emails", type="primary", use_container_width=True):
         # Validation checks
         if not subject:
@@ -224,117 +224,61 @@ def _render_send_button(
             st.warning("No recipients selected or no unused recipients available.")
             st.stop()
 
-        # Set sending state and trigger rerun to block UI
-        st.session_state.sending_emails = True
-        st.session_state.send_data = {
-            "recipient_ids": recipient_ids,
-            "subject": subject,
-            "dry_run": dry_run,
-        }
-        st.rerun()
+        # Send emails directly using st.status() - no rerun needed
+        status_label = "🧪 Dry run in progress..." if dry_run else "📧 Sending emails..."
+        with st.status(status_label, expanded=True) as status:
+            progress = st.progress(0)
+            log_container = st.container()
+            sent = 0
+            failed = 0
+            skipped = 0
+            total = len(recipient_ids)
+            errors = []
 
+            for i, event in enumerate(api.send_emails_stream(user_id, recipient_ids, subject, dry_run)):
+                if "error" in event:
+                    status.update(label=f"Error: {event['error']}", state="error")
+                    st.error(event["error"])
+                    return
 
-def render_sending_progress(api: APIClient, user_id: int):
-    """Render the email sending progress UI."""
-    st.warning("📧 **Sending emails in progress...**")
-    st.info("Please wait until all emails are sent. Do not close this page.")
+                # Update log
+                with log_container:
+                    status_text = f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
+                    if event.get("message"):
+                        status_text += f" ({event.get('message')})"
+                    st.text(status_text)
 
-    # Show progress container
-    progress_container = st.container()
-
-    # Process the email sending
-    send_data = st.session_state.get("send_data", {})
-    recipient_ids = send_data.get("recipient_ids", [])
-    subject = send_data.get("subject", "")
-    dry_run = send_data.get("dry_run", False)
-
-    with progress_container:
-        status_box = st.empty()
-        progress = st.progress(0)
-        log_box = st.container()
-        sent = 0
-        failed = 0
-        skipped = 0
-        total = len(recipient_ids)
-        errors = []
-        stream_error = None
-
-        for i, event in enumerate(
-            api.send_emails_stream(user_id, recipient_ids, subject, dry_run)
-        ):
-            if "error" in event:
-                stream_error = event["error"]
-                break
-
-            # Update UI incrementally
-            with log_box:
-                status_text = (
-                    f"{event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-                )
-                if event.get("message"):
-                    status_text += f" ({event.get('message')})"
-                st.text(status_text)
-
-            status_box.info(
-                f"Last email: {event.get('email', 'N/A')} → {event.get('status', 'unknown')}"
-            )
-
-            status = event.get("status", "")
-            if status == "sent":
-                sent += 1
-            elif status == "failed":
-                failed += 1
-                errors.append(
-                    {
+                event_status = event.get("status", "")
+                if event_status == "sent":
+                    sent += 1
+                elif event_status == "failed":
+                    failed += 1
+                    errors.append({
                         "email": event.get("email", "N/A"),
                         "message": event.get("message", "Unknown error"),
-                    }
-                )
-            elif status == "skipped":
-                skipped += 1
+                    })
+                elif event_status == "skipped":
+                    skipped += 1
+                elif event_status == "dry_run":
+                    sent += 1  # Count dry_run as "sent" for display purposes
 
-            if total > 0:
-                progress.progress((i + 1) / total)
+                progress.progress((i + 1) / total if total > 0 else 1)
 
-    # Store results and clear sending state
-    st.session_state.send_results = {
-        "sent": sent,
-        "failed": failed,
-        "skipped": skipped,
-        "errors": errors,
-        "stream_error": stream_error,
-        "dry_run": dry_run,
-    }
-    st.session_state.sending_emails = False
-    st.session_state.send_data = None
-    st.rerun()
+            # Show results
+            st.divider()
+            col1, col2, col3 = st.columns(3)
+            col1.metric("✅ Sent", sent)
+            col2.metric("❌ Failed", failed)
+            col3.metric("⏭️ Skipped", skipped)
 
+            if errors:
+                with st.expander("Failed emails details"):
+                    for err in errors:
+                        st.write(f"- {err['email']}: {err['message']}")
 
-def render_send_results():
-    """Render the results from a previous send operation."""
-    results = st.session_state.send_results
-    st.divider()
-
-    if results["stream_error"]:
-        st.error(f"Error: {results['stream_error']}")
-    else:
-        col1, col2, col3 = st.columns(3)
-        col1.metric("✅ Sent", results["sent"])
-        col2.metric("❌ Failed", results["failed"])
-        col3.metric("⏭️ Skipped", results["skipped"])
-
-        if results["errors"]:
-            with st.expander("Failed emails details"):
-                for err in results["errors"]:
-                    st.write(f"- {err['email']}: {err['message']}")
-
-        if results["dry_run"]:
-            st.info("Dry run completed - no emails were actually sent")
-        else:
-            st.success("Email sending completed!")
-
-    if st.button("Dismiss Results"):
-        st.session_state.send_results = None
-        st.rerun()
-
-    st.divider()
+            if dry_run:
+                status.update(label="🧪 Dry run completed", state="complete")
+                st.info("Dry run completed - no emails were actually sent")
+            else:
+                status.update(label="✅ Sending complete!", state="complete")
+                st.success("Email sending completed!")
