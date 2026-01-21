@@ -66,6 +66,14 @@ class EmailService:
         template_data = self.template_service.get_or_default(user_id)
         template_content = template_data["content"]
 
+        # Validate recipients belong to user
+        user_recipient_ids = {r.id for r in user.recipients}
+        invalid_ids = set(recipient_ids) - user_recipient_ids
+        if invalid_ids:
+            logger.warning(f"User {user_id} attempted to send to recipients {list(invalid_ids)} not linked to them")
+            yield json.dumps({"error": f"Recipients {list(invalid_ids)} not linked to this user"}) + "\n"
+            return
+
         # Get recipients
         recipients = self.db.query(Recipient).filter(Recipient.id.in_(recipient_ids)).all()
         if not recipients:
