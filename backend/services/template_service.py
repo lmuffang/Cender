@@ -40,7 +40,7 @@ class TemplateService:
             "Cordialement,\n"
             "Votre Nom"
         )
-        return {"content": default, "subject": ""}
+        return {"content": default, "subject": "Candidature spontanée"}
 
     def create_or_update(self, user_id: int, content: str, subject: str) -> Template:
         """
