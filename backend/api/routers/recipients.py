@@ -64,12 +64,19 @@ async def import_recipients_csv(
         created = 0
         updated = 0
         linked = 0
+        skipped = []
 
-        for _, row in df.iterrows():
+        for row_num, row in df.iterrows():
             email = row.get("Email", "")
-            if not isinstance(email, str) or not email:
-                continue  # is empty, NaN
+            if not isinstance(email, str) or not email or not email.strip():
+                skipped.append({"row": row_num + 2, "reason": "Missing or empty email"})  # +2 for header + 0-index
+                continue
             email = email.strip()
+
+            # Basic email validation
+            if "@" not in email or "." not in email:
+                skipped.append({"row": row_num + 2, "reason": f"Invalid email format: {email}"})
+                continue
             recipient_data = {"First Name": "", "Last Name": "", "Company": ""}
             for key in recipient_data.keys():
                 value = row.get(key)
@@ -125,6 +132,7 @@ async def import_recipients_csv(
             "updated": updated,
             "linked": linked,
             "total": created + updated,
+            "skipped": skipped,
         }
 
     except Exception as e:
