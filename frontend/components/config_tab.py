@@ -198,21 +198,22 @@ def _render_manage_recipients(api: APIClient, user_id: int):
 
     st.info(f"You have **{recipients_count}** recipients linked to your account.")
 
-    with st.expander("Remove All Recipients", expanded=False):
+    with st.expander("Unlink All Recipients", expanded=False):
         st.warning(
-            "This will remove all recipients from your account. "
-            "The recipients themselves are not deleted (they may be used by other users)."
+            "This will unlink all recipients from your account. "
+            "Recipients are not deleted from the system (they may be linked to other users)."
         )
+        st.info("Use this to start fresh with a new recipient list.")
 
         confirm_delete = st.checkbox(
-            "I understand this will remove all my recipients",
+            "I understand this will unlink all recipients from my account",
             key="confirm_delete_recipients"
         )
 
-        if st.button("Remove All Recipients", type="primary", disabled=not confirm_delete):
+        if st.button("Unlink All Recipients", type="primary", disabled=not confirm_delete):
             result = api.delete_all_recipients(user_id)
             if result.success:
-                st.success(f"Removed {result.data.get('count', 0)} recipients from your account.")
+                st.success(f"Unlinked {result.data.get('count', 0)} recipients from your account.")
                 st.rerun()
             else:
-                st.error(f"Failed to remove recipients: {result.error}")
+                st.error(f"Failed to unlink recipients: {result.error}")
