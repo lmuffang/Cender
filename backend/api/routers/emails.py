@@ -10,6 +10,7 @@ from config import settings
 from database import EmailStatus
 from api.schemas import EmailPreview, EmailLogResponse, SendEmailsRequest
 from api.dependencies import get_db, get_user_service, get_template_service, get_recipient_service, get_email_service
+from gmail_service import safe_format_template
 from utils.gender_detector import guess_salutation
 
 router = APIRouter(prefix="/users/{user_id}", tags=["emails"])
@@ -47,7 +48,7 @@ async def preview_email(
         salutation = salutation_text
 
     company = recipient.company or ""
-    body = template.content.format(salutation=salutation, company=company, company_name=company)
+    body = safe_format_template(template.content, salutation=salutation, company=company, company_name=company)
 
     # Get resume filename if available
     resume_path = settings.get_resume_path(user_id)

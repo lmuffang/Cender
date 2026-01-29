@@ -1,5 +1,6 @@
 import os
 import base64
+import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -157,6 +158,25 @@ def check_gmail_connection(credentials_path: str, token_path: str) -> dict:
     return result
 
 
+def safe_format_template(template: str, **kwargs) -> str:
+    """
+    Safely format a template string, leaving unknown placeholders as-is.
+
+    This prevents KeyError when users include invalid placeholders like {job_title}.
+    Known placeholders are replaced, unknown ones are left unchanged.
+    """
+    def replace_placeholder(match):
+        key = match.group(1)
+        if key in kwargs:
+            return str(kwargs[key])
+        # Leave unknown placeholders as-is
+        return match.group(0)
+
+    # Match {placeholder} patterns
+    pattern = r'\{(\w+)\}'
+    return re.sub(pattern, replace_placeholder, template)
+
+
 def create_message(
     to_email: str, salutation: str, company: str, template: str, resume_path: str, subject: str
 ):
@@ -165,7 +185,8 @@ def create_message(
     msg["To"] = to_email
     msg["Subject"] = subject
 
-    body = template.format(salutation=salutation, company=company, company_name=company)
+    # Use safe formatting to handle unknown placeholders gracefully
+    body = safe_format_template(template, salutation=salutation, company=company, company_name=company)
     msg.attach(MIMEText(body, "plain"))
 
     with open(resume_path, "rb") as attachment:
