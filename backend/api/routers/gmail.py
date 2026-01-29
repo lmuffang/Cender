@@ -13,6 +13,7 @@ router = APIRouter(prefix="/users/{user_id}", tags=["gmail"])
 def _get_user_or_404(user_id: int, db: Session) -> User:
     """Helper to get user or raise 404."""
     from exceptions import UserNotFoundError
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise UserNotFoundError(f"User with id {user_id} not found")
@@ -86,9 +87,7 @@ async def get_gmail_auth_url(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/gmail-auth-complete")
 async def complete_gmail_auth(
-    user_id: int,
-    request: GmailAuthCompleteRequest,
-    db: Session = Depends(get_db)
+    user_id: int, request: GmailAuthCompleteRequest, db: Session = Depends(get_db)
 ):
     """
     Complete OAuth flow with authorization code.

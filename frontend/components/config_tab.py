@@ -75,8 +75,9 @@ def _render_credentials_upload(api: APIClient, user_id: int, files_status: dict)
         st.info("Upload your OAuth 2.0 credentials JSON file from Google Cloud Console")
 
     credentials_file = st.file_uploader(
-        "Choose credentials file", type=["json"],
-        key=f"creds_{st.session_state.creds_upload_key}"
+        "Choose credentials file",
+        type=["json"],
+        key=f"creds_{st.session_state.creds_upload_key}",
     )
 
     if credentials_file:
@@ -134,15 +135,22 @@ def _render_auth_flow(api: APIClient, user_id: int):
 
     st.markdown("**Step 2:** Sign in and authorize the application")
 
-    st.markdown("**Step 3:** After authorizing, you'll be redirected to a page that shows an error "
-               "(this is expected). **Copy the entire URL** from your browser's address bar.")
-    st.info("The URL will look like:\n\n"
-           "`http://localhost/?state=...&code=4/0ABC...&scope=...`\n\n"
-           "Just copy the **entire URL** - we'll extract the code automatically!")
+    st.markdown(
+        "**Step 3:** After authorizing, you'll be redirected to a page that shows an error "
+        "(this is expected). **Copy the entire URL** from your browser's address bar."
+    )
+    st.info(
+        "The URL will look like:\n\n"
+        "`http://localhost/?state=...&code=4/0ABC...&scope=...`\n\n"
+        "Just copy the **entire URL** - we'll extract the code automatically!"
+    )
 
     st.markdown("**Step 4:** Paste the full redirect URL below:")
-    auth_code = st.text_input("Redirect URL", key="gmail_auth_code",
-                              placeholder="http://localhost/?state=...&code=...&scope=...")
+    auth_code = st.text_input(
+        "Redirect URL",
+        key="gmail_auth_code",
+        placeholder="http://localhost/?state=...&code=...&scope=...",
+    )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -174,8 +182,9 @@ def _render_resume_upload(api: APIClient, user_id: int, files_status: dict):
         st.info("Upload your resume PDF file")
 
     resume_file = st.file_uploader(
-        "Choose resume PDF", type=["pdf"],
-        key=f"resume_{st.session_state.resume_upload_key}"
+        "Choose resume PDF",
+        type=["pdf"],
+        key=f"resume_{st.session_state.resume_upload_key}",
     )
 
     if resume_file:
@@ -208,7 +217,7 @@ def _render_manage_recipients(api: APIClient, user_id: int):
 
         confirm_delete = st.checkbox(
             "I understand this will unlink all recipients from my account",
-            key="confirm_delete_recipients"
+            key="confirm_delete_recipients",
         )
 
         if st.button("Unlink All Recipients", type="primary", disabled=not confirm_delete):

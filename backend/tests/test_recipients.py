@@ -33,7 +33,11 @@ def test_create_recipient_duplicate_email(client, test_recipient):
     """Test creating recipient with duplicate email"""
     response = client.post(
         "/recipients/",
-        json={"email": test_recipient.email, "first_name": "Different", "last_name": "Person"},
+        json={
+            "email": test_recipient.email,
+            "first_name": "Different",
+            "last_name": "Person",
+        },
     )
     assert response.status_code == status.HTTP_409_CONFLICT
 
@@ -243,7 +247,9 @@ another@example.com,Another,User,Company3"""
 class TestPreviewEmail:
     """Additional tests for email preview."""
 
-    def test_preview_email_recipient_not_linked(self, client, test_user, test_recipient, test_template):
+    def test_preview_email_recipient_not_linked(
+        self, client, test_user, test_recipient, test_template
+    ):
         """Test that preview fails for unlinked recipient with 403."""
         # Recipient exists but is not linked to user
         response = client.post(

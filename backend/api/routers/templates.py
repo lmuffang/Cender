@@ -40,7 +40,9 @@ async def create_or_update_template(
 ):
     """Create or update user's template."""
     template_service = get_template_service(db)
-    return template_service.create_or_update(user_id, template_update.content, template_update.subject)
+    return template_service.create_or_update(
+        user_id, template_update.content, template_update.subject
+    )
 
 
 @router.put("/template", response_model=TemplateResponse)

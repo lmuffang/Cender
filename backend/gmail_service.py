@@ -16,58 +16,61 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 
-def get_authorization_url(credentials_path: str, redirect_uri: str = "urn:ietf:wg:oauth:2.0:oob") -> tuple[str, InstalledAppFlow]:
+def get_authorization_url(
+    credentials_path: str, redirect_uri: str = "urn:ietf:wg:oauth:2.0:oob"
+) -> tuple[str, InstalledAppFlow]:
     """
     Generate OAuth authorization URL.
-    
+
     Args:
         credentials_path: Path to OAuth credentials JSON
         redirect_uri: Redirect URI (use 'urn:ietf:wg:oauth:2.0:oob' for manual copy/paste)
-    
+
     Returns:
         Tuple of (authorization_url, flow object)
     """
     flow = InstalledAppFlow.from_client_secrets_file(
-        credentials_path, 
-        SCOPES,
-        redirect_uri=redirect_uri
+        credentials_path, SCOPES, redirect_uri=redirect_uri
     )
-    
+
     auth_url, _ = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'  # Force consent screen to ensure refresh token
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",  # Force consent screen to ensure refresh token
     )
-    
+
     return auth_url, flow
 
 
-def complete_authorization(credentials_path: str, auth_code: str, token_path: str, redirect_uri: str = "urn:ietf:wg:oauth:2.0:oob"):
+def complete_authorization(
+    credentials_path: str,
+    auth_code: str,
+    token_path: str,
+    redirect_uri: str = "urn:ietf:wg:oauth:2.0:oob",
+):
     """
     Complete OAuth flow with authorization code.
-    
+
     Args:
         credentials_path: Path to OAuth credentials JSON
         auth_code: Authorization code from user
         token_path: Path to save token
         redirect_uri: Redirect URI (must match the one used to get auth URL)
-    
+
     Returns:
         Gmail service object
     """
     flow = InstalledAppFlow.from_client_secrets_file(
-        credentials_path,
-        SCOPES,
-        redirect_uri=redirect_uri
+        credentials_path, SCOPES, redirect_uri=redirect_uri
     )
-    
+
     flow.fetch_token(code=auth_code)
     creds = flow.credentials
-    
+
     # Save credentials
     with open(token_path, "w") as token:
         token.write(creds.to_json())
-    
+
     return build("gmail", "v1", credentials=creds)
 
 
@@ -125,7 +128,7 @@ def check_gmail_connection(credentials_path: str, token_path: str) -> dict:
         "has_credentials": os.path.exists(credentials_path),
         "has_token": os.path.exists(token_path),
         "email": None,
-        "error": None
+        "error": None,
     }
 
     if not result["has_credentials"]:
@@ -167,6 +170,7 @@ def safe_format_template(template: str, **kwargs) -> str:
     This prevents KeyError when users include invalid placeholders like {job_title}.
     Known placeholders are replaced, unknown ones are left unchanged.
     """
+
     def replace_placeholder(match):
         key = match.group(1)
         if key in kwargs:
@@ -175,12 +179,17 @@ def safe_format_template(template: str, **kwargs) -> str:
         return match.group(0)
 
     # Match {placeholder} patterns
-    pattern = r'\{(\w+)\}'
+    pattern = r"\{(\w+)\}"
     return re.sub(pattern, replace_placeholder, template)
 
 
 def create_message(
-    to_email: str, salutation: str, company: str, template: str, resume_path: str, subject: str
+    to_email: str,
+    salutation: str,
+    company: str,
+    template: str,
+    resume_path: str,
+    subject: str,
 ):
     """Create email message with attachment"""
     msg = MIMEMultipart()
@@ -188,7 +197,9 @@ def create_message(
     msg["Subject"] = subject
 
     # Use safe formatting to handle unknown placeholders gracefully
-    body = safe_format_template(template, salutation=salutation, company=company, company_name=company)
+    body = safe_format_template(
+        template, salutation=salutation, company=company, company_name=company
+    )
     msg.attach(MIMEText(body, "plain"))
 
     with open(resume_path, "rb") as attachment:
@@ -196,7 +207,8 @@ def create_message(
         part.set_payload(attachment.read())
         encoders.encode_base64(part)
         part.add_header(
-            "Content-Disposition", f"attachment; filename={os.path.basename(resume_path)}"
+            "Content-Disposition",
+            f"attachment; filename={os.path.basename(resume_path)}",
         )
         msg.attach(part)
 

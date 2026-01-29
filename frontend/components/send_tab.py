@@ -43,7 +43,10 @@ def render(api: APIClient, user_id: int):
 
     # Email subject
     subject = st.text_input(
-        "Email Subject", placeholder="Candidature spontanée", value=subject, key="email_subject"
+        "Email Subject",
+        placeholder="Candidature spontanée",
+        value=subject,
+        key="email_subject",
     )
 
     # Template editor
@@ -190,7 +193,8 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
     df["status"] = df["status"].apply(format_status)
 
     st.dataframe(
-        df[["email", "first_name", "last_name", "company", "status"]], use_container_width=True
+        df[["email", "first_name", "last_name", "company", "status"]],
+        use_container_width=True,
     )
 
     # Preview - only save when button clicked
@@ -204,12 +208,22 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
 
     # Send button with confirmation
     _render_send_button(
-        api, user_id, displayed_recipients, selected_indices, subject, template_content, dry_run
+        api,
+        user_id,
+        displayed_recipients,
+        selected_indices,
+        subject,
+        template_content,
+        dry_run,
     )
 
 
 def _render_preview(
-    api: APIClient, user_id: int, displayed_recipients: list, subject: str, template_content: str
+    api: APIClient,
+    user_id: int,
+    displayed_recipients: list,
+    subject: str,
+    template_content: str,
 ):
     """Render email preview section."""
     if not displayed_recipients:
@@ -362,7 +376,9 @@ def _render_send_button(
                 st.rerun()
         with col2:
             if st.button(
-                f"Confirm Send ({stored_count})", type="primary", use_container_width=True
+                f"Confirm Send ({stored_count})",
+                type="primary",
+                use_container_width=True,
             ):
                 should_send = True
         if should_send:

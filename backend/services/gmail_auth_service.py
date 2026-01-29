@@ -17,6 +17,7 @@ from utils.logger import logger
 @dataclass
 class GmailStatus:
     """Gmail connection status."""
+
     connected: bool
     has_credentials: bool
     has_token: bool
@@ -27,6 +28,7 @@ class GmailStatus:
 @dataclass
 class UserFilesStatus:
     """Status of user's uploaded files."""
+
     has_credentials: bool
     has_resume: bool
     credentials_path: str
@@ -75,12 +77,14 @@ class GmailAuthService:
             Tuple of (auth_url, error_message)
         """
         if not os.path.exists(self.credentials_path):
-            return None, "Credentials file not uploaded. Please upload credentials.json first."
+            return (
+                None,
+                "Credentials file not uploaded. Please upload credentials.json first.",
+            )
 
         try:
             auth_url, _ = get_authorization_url(
-                self.credentials_path,
-                redirect_uri="http://localhost"
+                self.credentials_path, redirect_uri="http://localhost"
             )
             logger.info(f"Generated auth URL for user {self.user_id}")
             return auth_url, None
@@ -118,7 +122,10 @@ class GmailAuthService:
                     code = query_params["code"][0]
                     return code, None
                 else:
-                    return None, "URL does not contain an authorization code. Make sure you copied the full redirect URL."
+                    return (
+                        None,
+                        "URL does not contain an authorization code. Make sure you copied the full redirect URL.",
+                    )
             except Exception as e:
                 return None, f"Failed to parse URL: {str(e)}"
 
@@ -136,7 +143,10 @@ class GmailAuthService:
             Tuple of (success, message)
         """
         if not os.path.exists(self.credentials_path):
-            return False, "Credentials file not uploaded. Please upload credentials.json first."
+            return (
+                False,
+                "Credentials file not uploaded. Please upload credentials.json first.",
+            )
 
         # Extract authorization code from input
         auth_code, error = self.extract_auth_code(auth_input)
@@ -148,7 +158,7 @@ class GmailAuthService:
                 credentials_path=self.credentials_path,
                 auth_code=auth_code,
                 token_path=self.token_path,
-                redirect_uri="http://localhost"
+                redirect_uri="http://localhost",
             )
             logger.info(f"Gmail authorization completed for user {self.user_id}")
             return True, "Gmail connected successfully!"

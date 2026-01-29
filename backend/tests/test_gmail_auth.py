@@ -10,9 +10,7 @@ class TestGmailStatus:
     """Tests for GET /users/{user_id}/gmail-status endpoint."""
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_get_gmail_status_not_connected(
-        self, mock_get_service, client, test_user
-    ):
+    def test_get_gmail_status_not_connected(self, mock_get_service, client, test_user):
         """Test getting Gmail status when not connected."""
         mock_service = MagicMock()
         mock_service.get_gmail_status.return_value = GmailStatus(
@@ -35,9 +33,7 @@ class TestGmailStatus:
         mock_service.get_gmail_status.assert_called_once()
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_get_gmail_status_connected(
-        self, mock_get_service, client, test_user
-    ):
+    def test_get_gmail_status_connected(self, mock_get_service, client, test_user):
         """Test getting Gmail status when connected."""
         mock_service = MagicMock()
         mock_service.get_gmail_status.return_value = GmailStatus(
@@ -70,9 +66,7 @@ class TestFilesStatus:
     """Tests for GET /users/{user_id}/files-status endpoint."""
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_get_files_status(
-        self, mock_get_service, client, test_user
-    ):
+    def test_get_files_status(self, mock_get_service, client, test_user):
         """Test getting files status."""
         mock_service = MagicMock()
         mock_service.get_files_status.return_value = UserFilesStatus(
@@ -102,9 +96,7 @@ class TestGmailAuthUrl:
     """Tests for POST /users/{user_id}/gmail-auth-url endpoint."""
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_get_gmail_auth_url_success(
-        self, mock_get_service, client, test_user
-    ):
+    def test_get_gmail_auth_url_success(self, mock_get_service, client, test_user):
         """Test getting OAuth authorization URL successfully."""
         mock_service = MagicMock()
         mock_service.get_auth_url.return_value = (
@@ -122,9 +114,7 @@ class TestGmailAuthUrl:
         mock_service.get_auth_url.assert_called_once()
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_get_gmail_auth_url_no_credentials(
-        self, mock_get_service, client, test_user
-    ):
+    def test_get_gmail_auth_url_no_credentials(self, mock_get_service, client, test_user):
         """Test getting auth URL when credentials not uploaded."""
         mock_service = MagicMock()
         mock_service.get_auth_url.return_value = (
@@ -144,12 +134,13 @@ class TestGmailAuthComplete:
     """Tests for POST /users/{user_id}/gmail-auth-complete endpoint."""
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_complete_gmail_auth_success(
-        self, mock_get_service, client, test_user
-    ):
+    def test_complete_gmail_auth_success(self, mock_get_service, client, test_user):
         """Test completing OAuth flow successfully."""
         mock_service = MagicMock()
-        mock_service.complete_auth.return_value = (True, "Gmail connected successfully!")
+        mock_service.complete_auth.return_value = (
+            True,
+            "Gmail connected successfully!",
+        )
         mock_get_service.return_value = mock_service
 
         response = client.post(
@@ -163,9 +154,7 @@ class TestGmailAuthComplete:
         mock_service.complete_auth.assert_called_once_with("4/0ABC123...")
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_complete_gmail_auth_invalid_code(
-        self, mock_get_service, client, test_user
-    ):
+    def test_complete_gmail_auth_invalid_code(self, mock_get_service, client, test_user):
         """Test completing OAuth with invalid authorization code."""
         mock_service = MagicMock()
         mock_service.complete_auth.return_value = (
@@ -188,9 +177,7 @@ class TestGmailDisconnect:
     """Tests for POST /users/{user_id}/gmail-disconnect endpoint."""
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_disconnect_gmail_success(
-        self, mock_get_service, client, test_user
-    ):
+    def test_disconnect_gmail_success(self, mock_get_service, client, test_user):
         """Test disconnecting Gmail successfully."""
         mock_service = MagicMock()
         mock_service.disconnect_gmail.return_value = (
@@ -199,9 +186,7 @@ class TestGmailDisconnect:
         )
         mock_get_service.return_value = mock_service
 
-        response = client.post(
-            f"/users/{test_user.id}/gmail-disconnect"
-        )
+        response = client.post(f"/users/{test_user.id}/gmail-disconnect")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -209,9 +194,7 @@ class TestGmailDisconnect:
         mock_service.disconnect_gmail.assert_called_once()
 
     @patch("api.routers.gmail.get_gmail_auth_service")
-    def test_disconnect_gmail_not_connected(
-        self, mock_get_service, client, test_user
-    ):
+    def test_disconnect_gmail_not_connected(self, mock_get_service, client, test_user):
         """Test disconnect when Gmail was not connected (idempotent)."""
         mock_service = MagicMock()
         mock_service.disconnect_gmail.return_value = (
@@ -220,9 +203,7 @@ class TestGmailDisconnect:
         )
         mock_get_service.return_value = mock_service
 
-        response = client.post(
-            f"/users/{test_user.id}/gmail-disconnect"
-        )
+        response = client.post(f"/users/{test_user.id}/gmail-disconnect")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

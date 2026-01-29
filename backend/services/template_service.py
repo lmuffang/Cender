@@ -19,7 +19,7 @@ def validate_template_placeholders(content: str) -> list[str]:
 
     Returns list of invalid placeholder names found.
     """
-    found_placeholders = re.findall(r'\{(\w+)\}', content)
+    found_placeholders = re.findall(r"\{(\w+)\}", content)
     return [p for p in found_placeholders if p not in VALID_PLACEHOLDERS]
 
 

@@ -71,8 +71,13 @@ class EmailService:
         user_recipient_ids = {r.id for r in user.recipients}
         invalid_ids = set(recipient_ids) - user_recipient_ids
         if invalid_ids:
-            logger.warning(f"User {user_id} attempted to send to recipients {list(invalid_ids)} not linked to them")
-            yield json.dumps({"error": f"Recipients {list(invalid_ids)} not linked to this user"}) + "\n"
+            logger.warning(
+                f"User {user_id} attempted to send to recipients {list(invalid_ids)} not linked to them"
+            )
+            yield (
+                json.dumps({"error": f"Recipients {list(invalid_ids)} not linked to this user"})
+                + "\n"
+            )
             return
 
         # Get recipients
@@ -108,7 +113,7 @@ class EmailService:
                 logger.info(f"Authenticated Gmail service for user {user_id}")
             except Exception as e:
                 logger.error(f"Failed to authenticate Gmail for user {user_id}: {e}")
-                yield json.dumps({"error": f"Gmail authentication failed: {str(e)}"}) + "\n"
+                yield (json.dumps({"error": f"Gmail authentication failed: {str(e)}"}) + "\n")
                 return
 
         # Send emails
@@ -118,14 +123,17 @@ class EmailService:
 
             # Check if already sent
             if recipient_id in sent_recipient_ids or email in sent_emails:
-                yield json.dumps(
-                    {
-                        "recipient_id": recipient_id,
-                        "email": email,
-                        "status": EmailStatus.SKIPPED,
-                        "message": "Already sent",
-                    }
-                ) + "\n"
+                yield (
+                    json.dumps(
+                        {
+                            "recipient_id": recipient_id,
+                            "email": email,
+                            "status": EmailStatus.SKIPPED,
+                            "message": "Already sent",
+                        }
+                    )
+                    + "\n"
+                )
                 continue
 
             try:
@@ -153,14 +161,17 @@ class EmailService:
                 if dry_run:
                     logger.debug(f"Dry run: Preview email for {email}")
                     time.sleep(0.1)  # to simulate sent
-                    yield json.dumps(
-                        {
-                            "recipient_id": recipient_id,
-                            "email": email,
-                            "status": "dry_run",
-                            "preview": body,
-                        }
-                    ) + "\n"
+                    yield (
+                        json.dumps(
+                            {
+                                "recipient_id": recipient_id,
+                                "email": email,
+                                "status": "dry_run",
+                                "preview": body,
+                            }
+                        )
+                        + "\n"
+                    )
                 else:
                     # Send email
                     send_email(service, msg, email)
@@ -178,14 +189,17 @@ class EmailService:
                     self.db.add(log)
                     self.db.commit()
 
-                    yield json.dumps(
-                        {
-                            "recipient_id": recipient_id,
-                            "email": email,
-                            "status": "sent",
-                            "message": "Email sent",
-                        }
-                    ) + "\n"
+                    yield (
+                        json.dumps(
+                            {
+                                "recipient_id": recipient_id,
+                                "email": email,
+                                "status": "sent",
+                                "message": "Email sent",
+                            }
+                        )
+                        + "\n"
+                    )
 
             except Exception as e:
                 error_msg = str(e)
@@ -204,14 +218,17 @@ class EmailService:
                     self.db.add(log)
                     self.db.commit()
 
-                yield json.dumps(
-                    {
-                        "recipient_id": recipient_id,
-                        "email": email,
-                        "status": "failed",
-                        "message": error_msg,
-                    }
-                ) + "\n"
+                yield (
+                    json.dumps(
+                        {
+                            "recipient_id": recipient_id,
+                            "email": email,
+                            "status": "failed",
+                            "message": error_msg,
+                        }
+                    )
+                    + "\n"
+                )
 
     def get_logs(
         self, user_id: int, limit: int = 100, status: EmailStatus | None = None

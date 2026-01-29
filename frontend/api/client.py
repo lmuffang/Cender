@@ -11,6 +11,7 @@ import requests
 @dataclass
 class Result:
     """Result type for API operations."""
+
     success: bool
     data: Any = None
     error: str | None = None
@@ -32,7 +33,9 @@ class APIClient:
                 except json.JSONDecodeError:
                     return Result(success=True, data=None)
             try:
-                error_detail = response.json().get("detail", f"Request failed with status {response.status_code}")
+                error_detail = response.json().get(
+                    "detail", f"Request failed with status {response.status_code}"
+                )
             except json.JSONDecodeError:
                 error_detail = f"Request failed with status {response.status_code}"
             return Result(success=False, error=error_detail)
@@ -83,8 +86,8 @@ class APIClient:
                     "has_credentials": False,
                     "has_token": False,
                     "email": None,
-                    "error": result.error or "Failed to check status"
-                }
+                    "error": result.error or "Failed to check status",
+                },
             )
         return result
 
@@ -94,7 +97,11 @@ class APIClient:
 
     def complete_gmail_auth(self, user_id: int, auth_code: str) -> Result:
         """Complete Gmail OAuth with authorization code."""
-        return self._request("POST", f"/users/{user_id}/gmail-auth-complete", json={"auth_code": auth_code})
+        return self._request(
+            "POST",
+            f"/users/{user_id}/gmail-auth-complete",
+            json={"auth_code": auth_code},
+        )
 
     def disconnect_gmail(self, user_id: int) -> Result:
         """Disconnect Gmail by removing the token."""
@@ -114,7 +121,11 @@ class APIClient:
 
     def save_template(self, user_id: int, content: str, subject: str) -> Result:
         """Save user's template."""
-        return self._request("POST", f"/users/{user_id}/template", json={"content": content, "subject": subject})
+        return self._request(
+            "POST",
+            f"/users/{user_id}/template",
+            json={"content": content, "subject": subject},
+        )
 
     # Recipient endpoints
     def list_recipients(self, user_id: int, used: bool | None = None) -> Result:
@@ -145,14 +156,24 @@ class APIClient:
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 
-    def send_emails_stream(self, user_id: int, recipient_ids: list[int], subject: str, dry_run: bool = False):
+    def send_emails_stream(
+        self,
+        user_id: int,
+        recipient_ids: list[int],
+        subject: str,
+        dry_run: bool = False,
+    ):
         """Send emails stream - yields events."""
-        payload = {"recipient_ids": recipient_ids, "subject": subject, "dry_run": dry_run}
+        payload = {
+            "recipient_ids": recipient_ids,
+            "subject": subject,
+            "dry_run": dry_run,
+        }
         try:
             with requests.post(
                 f"{self.base_url}/users/{user_id}/send-emails/stream",
                 json=payload,
-                stream=True
+                stream=True,
             ) as response:
                 if response.status_code != 200:
                     try:
@@ -185,7 +206,12 @@ class APIClient:
         if not result.success:
             return Result(
                 success=True,
-                data={"total_sent": 0, "total_failed": 0, "total_skipped": 0, "total_emails": 0}
+                data={
+                    "total_sent": 0,
+                    "total_failed": 0,
+                    "total_skipped": 0,
+                    "total_emails": 0,
+                },
             )
         return result
 
@@ -202,7 +228,7 @@ class APIClient:
         recipient_id: int | None = None,
         status: str | None = None,
         before_date: str | None = None,
-        all_logs: bool = False
+        all_logs: bool = False,
     ) -> Result:
         """Delete email logs for a user."""
         params = {}

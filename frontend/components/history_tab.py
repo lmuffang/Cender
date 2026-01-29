@@ -67,7 +67,9 @@ def _render_reset_logs(api: APIClient, user_id: int):
                 )
             elif reset_option == "By status":
                 reset_status = st.selectbox(
-                    "Select status", options=["sent", "failed", "skipped"], key="reset_status"
+                    "Select status",
+                    options=["sent", "failed", "skipped"],
+                    key="reset_status",
                 )
             elif reset_option == "Before date":
                 reset_date = st.date_input("Delete logs before this date", key="reset_date")
@@ -89,7 +91,9 @@ def _render_reset_logs(api: APIClient, user_id: int):
                     result = api.delete_email_logs(user_id)
 
                 if result.success:
-                    st.success(f"✅ {result.data.get('message', 'Email logs deleted successfully')}")
+                    st.success(
+                        f"✅ {result.data.get('message', 'Email logs deleted successfully')}"
+                    )
                     st.rerun()
                 else:
                     st.error(f"❌ Failed to delete logs: {result.error}")
@@ -111,11 +115,20 @@ def _render_email_logs(api: APIClient, user_id: int):
 
         # Display logs table
         st.dataframe(
-            logs_df[["id", "recipient_email", "subject", "status", "sent_at", "error_message"]],
+            logs_df[
+                [
+                    "id",
+                    "recipient_email",
+                    "subject",
+                    "status",
+                    "sent_at",
+                    "error_message",
+                ]
+            ],
             use_container_width=True,
             column_config={
                 "recipient_email": "Email",
-            }
+            },
         )
 
         # Delete individual log

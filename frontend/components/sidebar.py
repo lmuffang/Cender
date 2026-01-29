@@ -29,7 +29,7 @@ def render(api: APIClient):
                 "Select User",
                 options=option_keys,
                 index=current_index,
-                key="user_select"
+                key="user_select",
             )
 
             # Update current_user based on selection
@@ -102,7 +102,7 @@ def _render_delete_user(api: APIClient):
 
         confirm_text = st.text_input(
             f"Type **{st.session_state.current_user['username']}** to confirm:",
-            key="delete_user_confirm"
+            key="delete_user_confirm",
         )
 
         if st.button("🗑️ Delete User Permanently", type="primary", use_container_width=True):

@@ -54,7 +54,9 @@ async def preview_email(
         salutation = salutation_text
 
     company = recipient.company or ""
-    body = safe_format_template(template.content, salutation=salutation, company=company, company_name=company)
+    body = safe_format_template(
+        template.content, salutation=salutation, company=company, company_name=company
+    )
 
     # Get resume filename if available
     resume_path = settings.get_resume_path(user_id)
