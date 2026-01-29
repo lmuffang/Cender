@@ -1,11 +1,11 @@
 """Recipient service layer."""
 
-from sqlalchemy.orm import Session
-
-from database import Recipient, user_recipients, EmailLog, EmailStatus
+from database import EmailLog, EmailStatus, Recipient, user_recipients
 from exceptions import RecipientNotFoundError, UserNotFoundError
-from services.user_service import UserService
+from sqlalchemy.orm import Session
 from utils.logger import logger
+
+from services.user_service import UserService
 
 
 class RecipientService:

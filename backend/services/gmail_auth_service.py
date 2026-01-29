@@ -1,14 +1,15 @@
 """Gmail authentication service layer."""
 
 import os
+
 from dataclasses import dataclass
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from config import settings
 from gmail_service import (
-    get_authorization_url,
-    complete_authorization,
     check_gmail_connection,
+    complete_authorization,
+    get_authorization_url,
 )
 from utils.logger import logger
 

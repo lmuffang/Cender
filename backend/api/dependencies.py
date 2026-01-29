@@ -1,13 +1,12 @@
 """Dependency injection factories for FastAPI endpoints."""
 
-from sqlalchemy.orm import Session
-
 from database import SessionLocal
-from services.user_service import UserService
-from services.template_service import TemplateService
-from services.recipient_service import RecipientService
 from services.email_service import EmailService
 from services.gmail_auth_service import GmailAuthService
+from services.recipient_service import RecipientService
+from services.template_service import TemplateService
+from services.user_service import UserService
+from sqlalchemy.orm import Session
 
 
 def get_db():

@@ -1,11 +1,11 @@
 """User management endpoints."""
 
+from exceptions import ValidationError
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.schemas import UserCreate, UserResponse
 from api.dependencies import get_db, get_user_service
-from exceptions import ValidationError
+from api.schemas import UserCreate, UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
 

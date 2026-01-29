@@ -1,17 +1,16 @@
 """Global exception handlers for FastAPI application."""
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-
 from exceptions import (
-    UserNotFoundError,
-    RecipientNotFoundError,
-    TemplateNotFoundError,
-    ValidationError,
+    CSVParseError,
     GmailAuthError,
     InvalidCredentialsError,
-    CSVParseError,
+    RecipientNotFoundError,
+    TemplateNotFoundError,
+    UserNotFoundError,
+    ValidationError,
 )
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 
 def register_exception_handlers(app: FastAPI) -> None:

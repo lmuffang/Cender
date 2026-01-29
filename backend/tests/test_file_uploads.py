@@ -1,6 +1,8 @@
-import pytest
-from fastapi import status
 import io
+
+import pytest
+
+from fastapi import status
 
 
 def test_upload_credentials(client, test_user):

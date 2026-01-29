@@ -2,9 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import status
-
 from database import EmailLog, EmailStatus, Recipient, User
+from fastapi import status
 
 
 def test_preview_email(client, test_user, test_recipient, test_template, test_db):

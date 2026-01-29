@@ -2,11 +2,11 @@
 
 import csv
 import io
+
 from datetime import datetime, timezone
 
-from fastapi import status
-
 from database import EmailLog, EmailStatus, Recipient, User
+from fastapi import status
 
 
 def test_create_recipient(client):

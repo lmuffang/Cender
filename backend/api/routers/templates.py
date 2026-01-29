@@ -1,12 +1,13 @@
 """Template management endpoints."""
 
 import datetime
+
+from exceptions import TemplateNotFoundError
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.schemas import TemplateResponse, TemplateUpdate
 from api.dependencies import get_db, get_template_service
-from exceptions import TemplateNotFoundError
+from api.schemas import TemplateResponse, TemplateUpdate
 
 router = APIRouter(prefix="/users/{user_id}", tags=["templates"])
 

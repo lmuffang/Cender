@@ -2,16 +2,22 @@
 
 import os
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-
 from config import settings
 from database import EmailStatus
-from api.schemas import EmailPreview, EmailLogResponse, SendEmailsRequest
-from api.dependencies import get_db, get_user_service, get_template_service, get_recipient_service, get_email_service
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from gmail_service import safe_format_template
+from sqlalchemy.orm import Session
 from utils.gender_detector import guess_salutation
+
+from api.dependencies import (
+    get_db,
+    get_email_service,
+    get_recipient_service,
+    get_template_service,
+    get_user_service,
+)
+from api.schemas import EmailLogResponse, EmailPreview, SendEmailsRequest
 
 router = APIRouter(prefix="/users/{user_id}", tags=["emails"])
 

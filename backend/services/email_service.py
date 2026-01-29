@@ -1,20 +1,21 @@
 """Email service layer."""
 
+import datetime
 import json
 import os
-import datetime
 import time
-from sqlalchemy.orm import Session
 
+from config import settings
 from database import EmailLog, EmailStatus, Recipient
-from exceptions import UserNotFoundError, InvalidCredentialsError, TemplateNotFoundError
+from exceptions import InvalidCredentialsError, TemplateNotFoundError, UserNotFoundError
 from gmail_service import authenticate_gmail, create_message, send_email
-from services.user_service import UserService
-from services.template_service import TemplateService
-from services.recipient_service import RecipientService
+from sqlalchemy.orm import Session
 from utils.gender_detector import guess_salutation
 from utils.logger import logger
-from config import settings
+
+from services.recipient_service import RecipientService
+from services.template_service import TemplateService
+from services.user_service import UserService
 
 
 class EmailService:

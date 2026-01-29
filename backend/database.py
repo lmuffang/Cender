@@ -1,16 +1,18 @@
 import enum
-import os
 import functools
+import os
+
 from datetime import datetime, timezone
+
 from sqlalchemy import (
-    create_engine,
-    Table,
     Column,
+    DateTime,
     Enum,
-    Text,
     ForeignKey,
     Integer,
-    DateTime,
+    Table,
+    Text,
+    create_engine,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -19,7 +21,6 @@ from sqlalchemy.orm import (
     relationship,
     sessionmaker,
 )
-
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/app.db")

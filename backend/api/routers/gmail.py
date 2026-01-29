@@ -1,11 +1,11 @@
 """Gmail authentication and file management endpoints."""
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from database import User
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from database import User
-from api.schemas import GmailAuthCompleteRequest
 from api.dependencies import get_db, get_gmail_auth_service
+from api.schemas import GmailAuthCompleteRequest
 
 router = APIRouter(prefix="/users/{user_id}", tags=["gmail"])
 

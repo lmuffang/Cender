@@ -2,12 +2,12 @@
 
 import re
 
-from sqlalchemy.orm import Session
-
 from database import Template
 from exceptions import TemplateNotFoundError, UserNotFoundError, ValidationError
-from services.user_service import UserService
+from sqlalchemy.orm import Session
 from utils.logger import logger
+
+from services.user_service import UserService
 
 # Valid placeholders that can be used in templates
 VALID_PLACEHOLDERS = {"salutation", "company", "company_name"}

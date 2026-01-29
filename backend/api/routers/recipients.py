@@ -1,14 +1,15 @@
 """Recipient management endpoints."""
 
-from fastapi import APIRouter, Depends, UploadFile, File, Query
-from sqlalchemy.orm import Session
 import pandas as pd
 
 from database import Recipient
-from api.schemas import RecipientCreate, RecipientResponse
-from api.dependencies import get_db, get_user_service, get_recipient_service
-from exceptions import ValidationError, CSVParseError
+from exceptions import CSVParseError, ValidationError
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from sqlalchemy.orm import Session
 from utils.logger import logger
+
+from api.dependencies import get_db, get_recipient_service, get_user_service
+from api.schemas import RecipientCreate, RecipientResponse
 
 router = APIRouter(tags=["recipients"])
 
@@ -69,7 +70,9 @@ async def import_recipients_csv(
         for row_num, row in df.iterrows():
             email = row.get("Email", "")
             if not isinstance(email, str) or not email or not email.strip():
-                skipped.append({"row": row_num + 2, "reason": "Missing or empty email"})  # +2 for header + 0-index
+                skipped.append(
+                    {"row": row_num + 2, "reason": "Missing or empty email"}
+                )  # +2 for header + 0-index
                 continue
             email = email.strip()
 

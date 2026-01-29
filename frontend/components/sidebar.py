@@ -1,6 +1,7 @@
 """Sidebar component with user selection, stats, and delete functionality."""
 
 import streamlit as st
+
 from api.client import APIClient
 from state import handle_user_switch
 
@@ -74,7 +75,7 @@ def _render_create_user(api: APIClient):
 def _render_user_stats(api: APIClient):
     """Render user statistics."""
     st.divider()
-    st.subheader("Statistics")
+    st.subheader("📊 Statistics")
     result = api.get_user_stats(st.session_state.current_user["id"])
     stats = result.data
     col1, col2 = st.columns(2)

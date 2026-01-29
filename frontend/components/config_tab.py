@@ -1,6 +1,7 @@
 """Configuration tab component."""
 
 import streamlit as st
+
 from api.client import APIClient
 
 

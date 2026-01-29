@@ -1,9 +1,11 @@
 """API client with Result pattern for consistent error handling."""
 
+import json
+
 from dataclasses import dataclass
 from typing import Any
+
 import requests
-import json
 
 
 @dataclass

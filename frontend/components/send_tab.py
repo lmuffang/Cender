@@ -2,8 +2,8 @@
 
 import re
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 from api.client import APIClient
 
@@ -18,7 +18,7 @@ def _validate_template_placeholders(template: str) -> list[str]:
     Returns list of invalid placeholder names found.
     """
     # Find all {placeholder} patterns
-    found_placeholders = re.findall(r'\{(\w+)\}', template)
+    found_placeholders = re.findall(r"\{(\w+)\}", template)
     invalid = [p for p in found_placeholders if p not in VALID_PLACEHOLDERS]
     return invalid
 
@@ -86,25 +86,20 @@ def render(api: APIClient, user_id: int):
 def _render_csv_upload(api: APIClient, user_id: int):
     """Render CSV upload section."""
     st.subheader("Upload Recipients CSV")
-    st.info(
-        "CSV should have columns: Email, First Name, Last Name, Company (or Company Name)"
-    )
+    st.info("CSV should have columns: Email, First Name, Last Name, Company (or Company Name)")
 
     csv_file = st.file_uploader(
-        "Choose CSV file", type=["csv"],
-        key=f"csv_{st.session_state.csv_upload_key}"
+        "Choose CSV file", type=["csv"], key=f"csv_{st.session_state.csv_upload_key}"
     )
 
     if csv_file and st.button("📥 Import CSV"):
         result = api.import_recipients_csv(user_id, csv_file)
         if result.success:
-            created = result.data.get('created', 0)
-            total = result.data.get('total', 0)
-            skipped = result.data.get('skipped', [])
+            created = result.data.get("created", 0)
+            total = result.data.get("total", 0)
+            skipped = result.data.get("skipped", [])
 
-            st.success(
-                f"Added {created} new recipients! ({total} processed in total)"
-            )
+            st.success(f"Added {created} new recipients! ({total} processed in total)")
 
             # Show skipped rows if any
             if skipped:
@@ -159,7 +154,9 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
         if log.get("status") == "sent":
             email = log.get("recipient_email")
             sent_at = log.get("sent_at")
-            if email and (email not in sent_status_by_email or sent_at > sent_status_by_email[email]):
+            if email and (
+                email not in sent_status_by_email or sent_at > sent_status_by_email[email]
+            ):
                 sent_status_by_email[email] = sent_at
 
     # Display recipients with selection
@@ -178,9 +175,7 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
         st.caption("No recipients selected - all displayed recipients will be targeted")
 
     # Add status column to dataframe
-    df["status"] = df["email"].apply(
-        lambda email: sent_status_by_email.get(email, "Not sent")
-    )
+    df["status"] = df["email"].apply(lambda email: sent_status_by_email.get(email, "Not sent"))
 
     # Format status column - convert timestamps to readable format
     def format_status(status):
@@ -194,7 +189,9 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
 
     df["status"] = df["status"].apply(format_status)
 
-    st.dataframe(df[["email", "first_name", "last_name", "company", "status"]], use_container_width=True)
+    st.dataframe(
+        df[["email", "first_name", "last_name", "company", "status"]], use_container_width=True
+    )
 
     # Preview - only save when button clicked
     _render_preview(api, user_id, displayed_recipients, subject, template_content)
@@ -206,10 +203,14 @@ def _render_recipients(api: APIClient, user_id: int, template_content: str, subj
     st.divider()
 
     # Send button with confirmation
-    _render_send_button(api, user_id, displayed_recipients, selected_indices, subject, template_content, dry_run)
+    _render_send_button(
+        api, user_id, displayed_recipients, selected_indices, subject, template_content, dry_run
+    )
 
 
-def _render_preview(api: APIClient, user_id: int, displayed_recipients: list, subject: str, template_content: str):
+def _render_preview(
+    api: APIClient, user_id: int, displayed_recipients: list, subject: str, template_content: str
+):
     """Render email preview section."""
     if not displayed_recipients:
         return
@@ -286,7 +287,7 @@ def _render_send_button(
     selected_indices: list,
     subject: str,
     template_content: str,
-    dry_run: bool
+    dry_run: bool,
 ):
     """Render the send emails button with validation and confirmation."""
 
@@ -295,7 +296,9 @@ def _render_send_button(
         target_count = len(selected_indices)
         target_desc = f"{target_count} selected recipient{'s' if target_count != 1 else ''}"
         # Store the actual IDs to use, not indices
-        target_recipient_ids = [displayed_recipients[i]["id"] for i in selected_indices if i < len(displayed_recipients)]
+        target_recipient_ids = [
+            displayed_recipients[i]["id"] for i in selected_indices if i < len(displayed_recipients)
+        ]
     else:
         # Will send to all unused - fetch once and cache for this render
         unused_result = api.list_recipients(user_id, used=False)
@@ -347,7 +350,9 @@ def _render_send_button(
             return
 
         # Second step: Show confirmation warning and confirm button
-        st.warning(f"You are about to send emails to **{stored_count}** recipient{'s' if stored_count != 1 else ''}. This action cannot be undone.")
+        st.warning(
+            f"You are about to send emails to **{stored_count}** recipient{'s' if stored_count != 1 else ''}. This action cannot be undone."
+        )
 
         should_send = False
         col1, col2 = st.columns(2)
@@ -356,7 +361,9 @@ def _render_send_button(
                 st.session_state.send_confirmed = False
                 st.rerun()
         with col2:
-            if st.button(f"Confirm Send ({stored_count})", type="primary", use_container_width=True):
+            if st.button(
+                f"Confirm Send ({stored_count})", type="primary", use_container_width=True
+            ):
                 should_send = True
         if should_send:
             # Use the stored recipient IDs from confirmation time
@@ -369,7 +376,7 @@ def _execute_send(
     recipient_ids: list[int],
     subject: str,
     template_content: str,
-    dry_run: bool
+    dry_run: bool,
 ):
     """Execute the actual email sending after confirmation."""
     # Reset confirmation state at start
@@ -384,14 +391,20 @@ def _execute_send(
         gmail_preflight = gmail_result.data
 
         if not preflight_status["has_credentials"]:
-            st.error("Gmail credentials not uploaded. Please go to Configuration tab and upload your credentials.json file.")
+            st.error(
+                "Gmail credentials not uploaded. Please go to Configuration tab and upload your credentials.json file."
+            )
             return
         if not gmail_preflight["connected"]:
             error_detail = gmail_preflight.get("error", "Unknown error")
-            st.error(f"Gmail not connected. Please go to Configuration tab to connect your Gmail account. ({error_detail})")
+            st.error(
+                f"Gmail not connected. Please go to Configuration tab to connect your Gmail account. ({error_detail})"
+            )
             return
         if not preflight_status["has_resume"]:
-            st.error("Resume not uploaded. Please go to Configuration tab and upload your resume PDF.")
+            st.error(
+                "Resume not uploaded. Please go to Configuration tab and upload your resume PDF."
+            )
             return
 
     # Save template first
@@ -433,10 +446,12 @@ def _execute_send(
                 sent += 1
             elif event_status == "failed":
                 failed += 1
-                errors.append({
-                    "email": event.get("email", "N/A"),
-                    "message": event.get("message", "Unknown error"),
-                })
+                errors.append(
+                    {
+                        "email": event.get("email", "N/A"),
+                        "message": event.get("message", "Unknown error"),
+                    }
+                )
             elif event_status == "skipped":
                 skipped += 1
             elif event_status == "dry_run":

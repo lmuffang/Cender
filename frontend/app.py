@@ -1,11 +1,12 @@
 """Cender - CV/Resume Email Sender Frontend Application."""
 
 import os
+
 import streamlit as st
 
-from state import init_session_state
 from api.client import APIClient
-from components import sidebar, send_tab, config_tab, history_tab
+from components import config_tab, history_tab, send_tab, sidebar
+from state import init_session_state
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
