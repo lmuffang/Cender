@@ -74,12 +74,13 @@ def _render_create_user(api: APIClient):
 def _render_user_stats(api: APIClient):
     """Render user statistics."""
     st.divider()
-    st.subheader("📊 Statistics")
+    st.subheader("Statistics")
     result = api.get_user_stats(st.session_state.current_user["id"])
     stats = result.data
     col1, col2 = st.columns(2)
-    col1.metric("Sent", stats["total_sent"])
+    col1.metric("Sent (logged)", stats["total_sent"])
     col2.metric("Failed", stats["total_failed"])
+    st.caption("Stats based on email logs. Deleting logs resets these counts.")
 
 
 def _render_delete_user(api: APIClient):
