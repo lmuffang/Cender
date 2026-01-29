@@ -31,9 +31,12 @@ def render(api: APIClient, user_id: int):
 
 def _render_reset_logs(api: APIClient, user_id: int):
     """Render the reset email logs section."""
-    with st.expander("🔄 Reset Sent Emails", expanded=False):
-        st.warning("⚠️ Resetting sent emails will allow you to re-send emails to those recipients.")
-        st.info("💡 This deletes the email logs. You can filter by recipient, status, or date.")
+    with st.expander("Reset Sent Emails", expanded=False):
+        st.error(
+            "**Warning:** Deleting email logs will mark those recipients as 'Unused' again. "
+            "This means they can receive duplicate emails if you send again!"
+        )
+        st.info("This deletes the email logs. You can filter by recipient, status, or date.")
 
         col1, col2 = st.columns(2)
 
