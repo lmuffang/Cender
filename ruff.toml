@@ -1,0 +1,21 @@
+line-length = 100
+
+[lint]
+select = ["I"]  # Enable isort rules
+
+[lint.isort]
+# 4 groups: stdlib, third-party, first-party, local-folder
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+# First-party packages (your custom packages - none currently)
+known-first-party = []
+
+# Force a blank line between each section
+force-sort-within-sections = false
+lines-between-types = 1
