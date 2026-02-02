@@ -1,6 +1,7 @@
 """Sidebar component with user selection, stats, and delete functionality."""
 
 import streamlit as st
+
 from api.client import APIClient
 from state import handle_user_switch
 
@@ -28,7 +29,7 @@ def render(api: APIClient):
                 "Select User",
                 options=option_keys,
                 index=current_index,
-                key="user_select"
+                key="user_select",
             )
 
             # Update current_user based on selection
@@ -78,8 +79,9 @@ def _render_user_stats(api: APIClient):
     result = api.get_user_stats(st.session_state.current_user["id"])
     stats = result.data
     col1, col2 = st.columns(2)
-    col1.metric("Sent", stats["total_sent"])
+    col1.metric("Sent (logged)", stats["total_sent"])
     col2.metric("Failed", stats["total_failed"])
+    st.caption("Stats based on email logs. Deleting logs resets these counts.")
 
 
 def _render_delete_user(api: APIClient):
@@ -100,7 +102,7 @@ def _render_delete_user(api: APIClient):
 
         confirm_text = st.text_input(
             f"Type **{st.session_state.current_user['username']}** to confirm:",
-            key="delete_user_confirm"
+            key="delete_user_confirm",
         )
 
         if st.button("🗑️ Delete User Permanently", type="primary", use_container_width=True):

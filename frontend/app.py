@@ -1,11 +1,12 @@
 """Cender - CV/Resume Email Sender Frontend Application."""
 
 import os
+
 import streamlit as st
 
-from state import init_session_state
 from api.client import APIClient
-from components import sidebar, send_tab, config_tab, history_tab
+from components import config_tab, history_tab, send_tab, sidebar
+from state import init_session_state
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
@@ -28,15 +29,6 @@ if not st.session_state.current_user:
 
 user_id = st.session_state.current_user["id"]
 username = st.session_state.current_user["username"]
-
-# Block UI while sending emails
-if st.session_state.sending_emails:
-    send_tab.render_sending_progress(api, user_id)
-    st.stop()
-
-# Show results from previous send operation
-if st.session_state.send_results:
-    send_tab.render_send_results()
 
 st.subheader(f"Welcome, {username}! 👋")
 

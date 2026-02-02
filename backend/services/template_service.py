@@ -1,11 +1,26 @@
 """Template service layer."""
 
-from sqlalchemy.orm import Session
+import re
 
 from database import Template
-from exceptions import TemplateNotFoundError, UserNotFoundError
-from services.user_service import UserService
+from exceptions import TemplateNotFoundError, UserNotFoundError, ValidationError
+from sqlalchemy.orm import Session
 from utils.logger import logger
+
+from services.user_service import UserService
+
+# Valid placeholders that can be used in templates
+VALID_PLACEHOLDERS = {"salutation", "company", "company_name"}
+
+
+def validate_template_placeholders(content: str) -> list[str]:
+    """
+    Validate that template only uses known placeholders.
+
+    Returns list of invalid placeholder names found.
+    """
+    found_placeholders = re.findall(r"\{(\w+)\}", content)
+    return [p for p in found_placeholders if p not in VALID_PLACEHOLDERS]
 
 
 class TemplateService:
@@ -40,7 +55,7 @@ class TemplateService:
             "Cordialement,\n"
             "Votre Nom"
         )
-        return {"content": default, "subject": ""}
+        return {"content": default, "subject": "Candidature spontanée"}
 
     def create_or_update(self, user_id: int, content: str, subject: str) -> Template:
         """
@@ -56,9 +71,19 @@ class TemplateService:
 
         Raises:
             UserNotFoundError: If user not found
+            ValidationError: If template contains invalid placeholders
         """
         # Verify user exists
         self.user_service.get_by_id(user_id)
+
+        # Validate placeholders
+        invalid_placeholders = validate_template_placeholders(content)
+        if invalid_placeholders:
+            invalid_list = ", ".join(f"{{{p}}}" for p in invalid_placeholders)
+            raise ValidationError(
+                f"Invalid placeholder(s): {invalid_list}. "
+                f"Valid placeholders are: {{salutation}}, {{company}}, {{company_name}}"
+            )
 
         template = self.db.query(Template).filter(Template.user_id == user_id).first()
         if template:

@@ -1,13 +1,23 @@
 """Email sending and logging endpoints."""
 
+import os
+
+from config import settings
+from database import EmailStatus
 from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from gmail_service import safe_format_template
 from sqlalchemy.orm import Session
-
-from database import EmailStatus
-from api.schemas import EmailPreview, EmailLogResponse, SendEmailsRequest
-from api.dependencies import get_db, get_user_service, get_template_service, get_recipient_service, get_email_service
 from utils.gender_detector import guess_salutation
+
+from api.dependencies import (
+    get_db,
+    get_email_service,
+    get_recipient_service,
+    get_template_service,
+    get_user_service,
+)
+from api.schemas import EmailLogResponse, EmailPreview, SendEmailsRequest
 
 router = APIRouter(prefix="/users/{user_id}", tags=["emails"])
 
@@ -44,12 +54,19 @@ async def preview_email(
         salutation = salutation_text
 
     company = recipient.company or ""
-    body = template.content.format(salutation=salutation, company=company)
+    body = safe_format_template(
+        template.content, salutation=salutation, company=company, company_name=company
+    )
+
+    # Get resume filename if available
+    resume_path = settings.get_resume_path(user_id)
+    attachment_filename = os.path.basename(resume_path) if resume_path else None
 
     return EmailPreview(
         email=recipient.email,
         subject=subject,
         body=body,
+        attachment_filename=attachment_filename,
     )
 
 

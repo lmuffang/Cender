@@ -1,14 +1,15 @@
 """Recipient management endpoints."""
 
-from fastapi import APIRouter, Depends, UploadFile, File, Query
-from sqlalchemy.orm import Session
 import pandas as pd
 
 from database import Recipient
-from api.schemas import RecipientCreate, RecipientResponse
-from api.dependencies import get_db, get_user_service, get_recipient_service
-from exceptions import ValidationError, CSVParseError
+from exceptions import CSVParseError, ValidationError
+from fastapi import APIRouter, Depends, File, Query, UploadFile
+from sqlalchemy.orm import Session
 from utils.logger import logger
+
+from api.dependencies import get_db, get_recipient_service, get_user_service
+from api.schemas import RecipientCreate, RecipientResponse
 
 router = APIRouter(tags=["recipients"])
 
@@ -64,18 +65,33 @@ async def import_recipients_csv(
         created = 0
         updated = 0
         linked = 0
+        skipped = []
 
-        for _, row in df.iterrows():
+        for row_num, row in df.iterrows():
             email = row.get("Email", "")
-            if not isinstance(email, str) or not email:
-                continue  # is empty, NaN
+            if not isinstance(email, str) or not email or not email.strip():
+                skipped.append(
+                    {"row": row_num + 2, "reason": "Missing or empty email"}
+                )  # +2 for header + 0-index
+                continue
             email = email.strip()
+
+            # Basic email validation
+            if "@" not in email or "." not in email:
+                skipped.append({"row": row_num + 2, "reason": f"Invalid email format: {email}"})
+                continue
             recipient_data = {"First Name": "", "Last Name": "", "Company": ""}
             for key in recipient_data.keys():
                 value = row.get(key)
                 if not isinstance(value, str) or not value:
                     value = ""  # is empty, NaN
                 recipient_data[key] = value.strip()
+
+            # Support "Company Name" as an alternative to "Company"
+            if not recipient_data["Company"]:
+                company_name = row.get("Company Name")
+                if isinstance(company_name, str) and company_name:
+                    recipient_data["Company"] = company_name.strip()
 
             # Find existing recipient
             recipient = db.query(Recipient).filter(Recipient.email == email).one_or_none()
@@ -119,6 +135,7 @@ async def import_recipients_csv(
             "updated": updated,
             "linked": linked,
             "total": created + updated,
+            "skipped": skipped,
         }
 
     except Exception as e:

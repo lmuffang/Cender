@@ -1,14 +1,15 @@
-import pytest
 import os
-import tempfile
 import shutil
+import tempfile
+
+import pytest
+
+from api.dependencies import get_db
+from database import Base, EmailLog, EmailStatus, Recipient, Template, User
+from fastapi.testclient import TestClient
+from main import app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
-
-from database import Base, User, Recipient, Template, EmailLog, EmailStatus
-from main import app
-from api.dependencies import get_db
 
 
 @pytest.fixture(scope="function")
@@ -64,7 +65,10 @@ def test_recipient(test_db):
     """Create a test recipient"""
     db = test_db()
     recipient = Recipient(
-        email="recipient@example.com", first_name="John", last_name="Doe", company="Test Company"
+        email="recipient@example.com",
+        first_name="John",
+        last_name="Doe",
+        company="Test Company",
     )
     db.add(recipient)
     db.commit()
@@ -77,7 +81,11 @@ def test_recipient(test_db):
 def test_template(test_db, test_user):
     """Create a test template for a user"""
     db = test_db()
-    template = Template(user_id=test_user.id, content="Hello {salutation}, welcome to {company}!", subject="Testing Welcome")
+    template = Template(
+        user_id=test_user.id,
+        content="Hello {salutation}, welcome to {company}!",
+        subject="Testing Welcome",
+    )
     db.add(template)
     db.commit()
     db.refresh(template)

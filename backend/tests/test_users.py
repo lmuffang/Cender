@@ -2,9 +2,8 @@
 
 from datetime import datetime, timezone
 
-from fastapi import status
-
 from database import EmailLog, EmailStatus, Recipient, Template, User
+from fastapi import status
 
 
 def test_create_user(client):

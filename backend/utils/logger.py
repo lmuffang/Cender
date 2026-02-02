@@ -2,6 +2,7 @@
 
 import logging
 import sys
+
 from typing import Any
 
 from config import settings

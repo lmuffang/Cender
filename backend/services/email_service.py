@@ -1,20 +1,21 @@
 """Email service layer."""
 
+import datetime
 import json
 import os
-import datetime
 import time
-from sqlalchemy.orm import Session
 
+from config import settings
 from database import EmailLog, EmailStatus, Recipient
-from exceptions import UserNotFoundError, InvalidCredentialsError, TemplateNotFoundError
+from exceptions import InvalidCredentialsError, TemplateNotFoundError, UserNotFoundError
 from gmail_service import authenticate_gmail, create_message, send_email
-from services.user_service import UserService
-from services.template_service import TemplateService
-from services.recipient_service import RecipientService
+from sqlalchemy.orm import Session
 from utils.gender_detector import guess_salutation
 from utils.logger import logger
-from config import settings
+
+from services.recipient_service import RecipientService
+from services.template_service import TemplateService
+from services.user_service import UserService
 
 
 class EmailService:
@@ -57,7 +58,7 @@ class EmailService:
             yield json.dumps({"error": "Gmail credentials not uploaded"}) + "\n"
             return
 
-        if not os.path.exists(resume_path):
+        if not resume_path:
             logger.error(f"Resume not found for user {user_id}")
             yield json.dumps({"error": "Resume not uploaded"}) + "\n"
             return
@@ -65,6 +66,19 @@ class EmailService:
         # Get template
         template_data = self.template_service.get_or_default(user_id)
         template_content = template_data["content"]
+
+        # Validate recipients belong to user
+        user_recipient_ids = {r.id for r in user.recipients}
+        invalid_ids = set(recipient_ids) - user_recipient_ids
+        if invalid_ids:
+            logger.warning(
+                f"User {user_id} attempted to send to recipients {list(invalid_ids)} not linked to them"
+            )
+            yield (
+                json.dumps({"error": f"Recipients {list(invalid_ids)} not linked to this user"})
+                + "\n"
+            )
+            return
 
         # Get recipients
         recipients = self.db.query(Recipient).filter(Recipient.id.in_(recipient_ids)).all()
@@ -99,7 +113,7 @@ class EmailService:
                 logger.info(f"Authenticated Gmail service for user {user_id}")
             except Exception as e:
                 logger.error(f"Failed to authenticate Gmail for user {user_id}: {e}")
-                yield json.dumps({"error": f"Gmail authentication failed: {str(e)}"}) + "\n"
+                yield (json.dumps({"error": f"Gmail authentication failed: {str(e)}"}) + "\n")
                 return
 
         # Send emails
@@ -109,14 +123,17 @@ class EmailService:
 
             # Check if already sent
             if recipient_id in sent_recipient_ids or email in sent_emails:
-                yield json.dumps(
-                    {
-                        "recipient_id": recipient_id,
-                        "email": email,
-                        "status": EmailStatus.SKIPPED,
-                        "message": "Already sent",
-                    }
-                ) + "\n"
+                yield (
+                    json.dumps(
+                        {
+                            "recipient_id": recipient_id,
+                            "email": email,
+                            "status": EmailStatus.SKIPPED,
+                            "message": "Already sent",
+                        }
+                    )
+                    + "\n"
+                )
                 continue
 
             try:
@@ -144,14 +161,17 @@ class EmailService:
                 if dry_run:
                     logger.debug(f"Dry run: Preview email for {email}")
                     time.sleep(0.1)  # to simulate sent
-                    yield json.dumps(
-                        {
-                            "recipient_id": recipient_id,
-                            "email": email,
-                            "status": "dry_run",
-                            "preview": body,
-                        }
-                    ) + "\n"
+                    yield (
+                        json.dumps(
+                            {
+                                "recipient_id": recipient_id,
+                                "email": email,
+                                "status": "dry_run",
+                                "preview": body,
+                            }
+                        )
+                        + "\n"
+                    )
                 else:
                     # Send email
                     send_email(service, msg, email)
@@ -169,14 +189,17 @@ class EmailService:
                     self.db.add(log)
                     self.db.commit()
 
-                    yield json.dumps(
-                        {
-                            "recipient_id": recipient_id,
-                            "email": email,
-                            "status": "sent",
-                            "message": "Email sent",
-                        }
-                    ) + "\n"
+                    yield (
+                        json.dumps(
+                            {
+                                "recipient_id": recipient_id,
+                                "email": email,
+                                "status": "sent",
+                                "message": "Email sent",
+                            }
+                        )
+                        + "\n"
+                    )
 
             except Exception as e:
                 error_msg = str(e)
@@ -195,14 +218,17 @@ class EmailService:
                     self.db.add(log)
                     self.db.commit()
 
-                yield json.dumps(
-                    {
-                        "recipient_id": recipient_id,
-                        "email": email,
-                        "status": "failed",
-                        "message": error_msg,
-                    }
-                ) + "\n"
+                yield (
+                    json.dumps(
+                        {
+                            "recipient_id": recipient_id,
+                            "email": email,
+                            "status": "failed",
+                            "message": error_msg,
+                        }
+                    )
+                    + "\n"
+                )
 
     def get_logs(
         self, user_id: int, limit: int = 100, status: EmailStatus | None = None

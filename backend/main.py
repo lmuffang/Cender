@@ -1,13 +1,12 @@
 """Cender API - FastAPI application entry point."""
 
+from api.exception_handlers import register_exception_handlers
+from api.routers import emails, gmail, recipients, templates, users
+from config import settings
+from database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from database import engine, Base
-from config import settings
 from utils.logger import logger
-from api.exception_handlers import register_exception_handlers
-from api.routers import users, gmail, templates, recipients, emails
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 

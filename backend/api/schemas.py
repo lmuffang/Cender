@@ -1,7 +1,8 @@
 """Pydantic models for API request/response schemas."""
 
 import datetime
-from pydantic import BaseModel, EmailStr, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserCreate(BaseModel):
@@ -55,6 +56,7 @@ class EmailPreview(BaseModel):
     email: str
     subject: str
     body: str
+    attachment_filename: str | None = None
 
 
 class EmailLogResponse(BaseModel):

@@ -1,11 +1,11 @@
 """Gmail authentication and file management endpoints."""
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from database import User
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from database import User
-from api.schemas import GmailAuthCompleteRequest
 from api.dependencies import get_db, get_gmail_auth_service
+from api.schemas import GmailAuthCompleteRequest
 
 router = APIRouter(prefix="/users/{user_id}", tags=["gmail"])
 
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/users/{user_id}", tags=["gmail"])
 def _get_user_or_404(user_id: int, db: Session) -> User:
     """Helper to get user or raise 404."""
     from exceptions import UserNotFoundError
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise UserNotFoundError(f"User with id {user_id} not found")
@@ -86,9 +87,7 @@ async def get_gmail_auth_url(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/gmail-auth-complete")
 async def complete_gmail_auth(
-    user_id: int,
-    request: GmailAuthCompleteRequest,
-    db: Session = Depends(get_db)
+    user_id: int, request: GmailAuthCompleteRequest, db: Session = Depends(get_db)
 ):
     """
     Complete OAuth flow with authorization code.
@@ -132,7 +131,7 @@ async def upload_resume(user_id: int, file: UploadFile = File(...), db: Session 
 
     gmail_service = get_gmail_auth_service(user_id)
     content = await file.read()
-    success, message = gmail_service.save_resume(content)
+    success, message = gmail_service.save_resume(content, file.filename)
 
     if not success:
         raise HTTPException(status_code=500, detail=message)

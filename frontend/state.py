@@ -11,20 +11,10 @@ def init_session_state():
         "creds_upload_key": 0,
         "resume_upload_key": 0,
         "csv_upload_key": 0,
-        "sending_emails": False,
-        "send_results": None,
-        "send_data": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
-
-
-def clear_sending_state():
-    """Clear email sending related state."""
-    st.session_state.send_results = None
-    st.session_state.sending_emails = False
-    st.session_state.send_data = None
 
 
 def clear_gmail_auth_state():
@@ -43,7 +33,6 @@ def handle_user_switch(new_user: dict):
 
     if st.session_state.current_user["id"] != new_user["id"]:
         st.session_state.current_user = new_user
-        clear_sending_state()
         clear_gmail_auth_state()
         return True
 

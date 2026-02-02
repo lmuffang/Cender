@@ -1,5 +1,7 @@
 """Configuration management using Pydantic Settings."""
 
+import glob as glob_module
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,9 +38,19 @@ class Settings(BaseSettings):
         """Get token file path for user."""
         return f"{self.credentials_dir}/user_{user_id}_token.json"
 
-    def get_resume_path(self, user_id: int) -> str:
-        """Get resume file path for user."""
-        return f"{self.data_dir}/user_{user_id}_resume.pdf"
+    def get_user_data_dir(self, user_id: int) -> str:
+        """Get user-specific data directory."""
+        return f"{self.data_dir}/user_{user_id}"
+
+    def get_resume_path(self, user_id: int) -> str | None:
+        """
+        Get resume file path for user.
+
+        Returns the first PDF found in the user's data directory, or None if not found.
+        """
+        user_dir = self.get_user_data_dir(user_id)
+        pdf_files = glob_module.glob(f"{user_dir}/*.pdf")
+        return pdf_files[0] if pdf_files else None
 
 
 # Global settings instance

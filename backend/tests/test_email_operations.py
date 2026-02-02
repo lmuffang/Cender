@@ -2,9 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import status
-
 from database import EmailLog, EmailStatus, Recipient, User
+from fastapi import status
 
 
 def test_preview_email(client, test_user, test_recipient, test_template, test_db):
@@ -19,7 +18,8 @@ def test_preview_email(client, test_user, test_recipient, test_template, test_db
     db.close()
 
     response = client.post(
-        f"/users/{test_user.id}/preview-email/{test_recipient.id}", data={"subject": "Test Subject"}
+        f"/users/{test_user.id}/preview-email/{test_recipient.id}",
+        data={"subject": "Test Subject"},
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -45,7 +45,8 @@ def test_preview_email_no_template(client, test_user, test_recipient, test_db):
     db.close()
 
     response = client.post(
-        f"/users/{test_user.id}/preview-email/{test_recipient.id}", data={"subject": "Test Subject"}
+        f"/users/{test_user.id}/preview-email/{test_recipient.id}",
+        data={"subject": "Test Subject"},
     )
 
     # Should return 404 if no template
@@ -131,7 +132,11 @@ def test_send_emails_stream_dry_run(client, test_user, test_recipient, test_temp
     # In a real scenario, you'd mock the Gmail service
     response = client.post(
         f"/users/{test_user.id}/send-emails/stream",
-        json={"recipient_ids": [test_recipient.id], "subject": "Test Subject", "dry_run": True},
+        json={
+            "recipient_ids": [test_recipient.id],
+            "subject": "Test Subject",
+            "dry_run": True,
+        },
     )
 
     # Should return streaming response or error about missing credentials/resume
@@ -145,7 +150,14 @@ def test_send_emails_stream_dry_run(client, test_user, test_recipient, test_temp
 class TestEmailLogDeletion:
     """Tests for email log deletion endpoints."""
 
-    def _create_email_logs(self, test_db, test_user, count=3, email_status=EmailStatus.SENT, recipient_id=None):
+    def _create_email_logs(
+        self,
+        test_db,
+        test_user,
+        count=3,
+        email_status=EmailStatus.SENT,
+        recipient_id=None,
+    ):
         """Helper to create email logs."""
         db = test_db()
         logs = []
@@ -239,9 +251,7 @@ class TestEmailLogDeletion:
 
         # Delete logs before 5 days ago
         before_date = (datetime.now(timezone.utc) - timedelta(days=5)).strftime("%Y-%m-%d")
-        response = client.delete(
-            f"/users/{test_user.id}/email-logs?before_date={before_date}"
-        )
+        response = client.delete(f"/users/{test_user.id}/email-logs?before_date={before_date}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -290,9 +300,7 @@ class TestEmailLogDeletion:
         target_log_id = log_ids[0]
 
         # Delete specific log
-        response = client.delete(
-            f"/users/{test_user.id}/email-logs/{target_log_id}"
-        )
+        response = client.delete(f"/users/{test_user.id}/email-logs/{target_log_id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

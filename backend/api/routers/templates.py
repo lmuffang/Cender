@@ -1,12 +1,13 @@
 """Template management endpoints."""
 
 import datetime
+
+from exceptions import TemplateNotFoundError
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from api.schemas import TemplateResponse, TemplateUpdate
 from api.dependencies import get_db, get_template_service
-from exceptions import TemplateNotFoundError
+from api.schemas import TemplateResponse, TemplateUpdate
 
 router = APIRouter(prefix="/users/{user_id}", tags=["templates"])
 
@@ -39,7 +40,9 @@ async def create_or_update_template(
 ):
     """Create or update user's template."""
     template_service = get_template_service(db)
-    return template_service.create_or_update(user_id, template_update.content, template_update.subject)
+    return template_service.create_or_update(
+        user_id, template_update.content, template_update.subject
+    )
 
 
 @router.put("/template", response_model=TemplateResponse)
