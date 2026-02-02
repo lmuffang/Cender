@@ -22,24 +22,32 @@ Modern web-based CV/resume email sender with multi-user support, built with Stre
 ## Project Structure
 
 ```
-cv-email-sender/
+cender/
 ├── docker-compose.yml
-├── start.bat              # Windows startup script
-├── start.sh               # Mac/Linux startup script
-├── stop.bat               # Windows stop script
-├── stop.sh                # Mac/Linux stop script
+├── start.bat / start.sh       # Startup scripts
+├── stop.bat / stop.sh         # Stop scripts
 ├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── main.py           # FastAPI application
-│   ├── database.py       # SQLAlchemy models
-│   └── gmail_service.py  # Gmail API integration
+│   ├── main.py                # FastAPI app entry point
+│   ├── config.py              # Pydantic Settings configuration
+│   ├── database.py            # SQLAlchemy models
+│   ├── exceptions.py          # Custom exception hierarchy
+│   ├── gmail_service.py       # Gmail API wrapper
+│   ├── api/
+│   │   ├── schemas.py         # Pydantic request/response models
+│   │   ├── dependencies.py    # Service factories
+│   │   ├── exception_handlers.py
+│   │   └── routers/           # users, gmail, templates, recipients, emails
+│   ├── services/              # Business logic layer
+│   ├── utils/                 # Logger, gender detector
+│   ├── tests/                 # Pytest test suite
+│   └── alembic/               # Database migrations
 ├── frontend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app.py            # Streamlit application
-├── data/                 # SQLite database and user resumes
-└── credentials/          # Gmail credentials and tokens per user
+│   ├── app.py                 # Streamlit entry point
+│   ├── state.py               # Session state management
+│   ├── api/client.py          # APIClient with Result pattern
+│   └── components/            # sidebar, send_tab, config_tab, history_tab
+├── data/                      # SQLite database and user resumes
+└── credentials/               # Gmail credentials and tokens per user
 ```
 
 ## Setup Instructions
@@ -271,41 +279,39 @@ For issues or questions:
 
 ### ✅ Completed
 - [x] Multi-user support with isolated data
-- [x] Template management per user
+- [x] Template management per user (with subject storage)
 - [x] CSV import for recipients
 - [x] Email tracking and logging
-- [x] Email log visualization
-- [x] Reset/delete email logs functionality
-- [x] Backend API refactoring and organization
-- [x] Comprehensive test suite
+- [x] Email log visualization and reset functionality
+- [x] Backend API refactoring (service layer, routers, schemas)
+- [x] Comprehensive test suite (~74 tests)
 - [x] Docker-based testing infrastructure
-- [x] **Template enhancement**: Store email subject in it.
+- [x] Database migrations (Alembic)
+- [x] Structured logging
+- [x] Configuration management (Pydantic Settings)
+- [x] Custom exception hierarchy with global handlers
+- [x] Frontend componentization and state management
 
 ### 🚧 In Progress / Short-term
-- [ ] **Recipient Selection Enhancement**: Allow selecting specific recipients (not just unused ones) - Partially done
+- [ ] **Recipient Selection Enhancement**: Allow selecting specific recipients (not just unused ones)
 - [ ] **Data Export/Import**: Export email logs and user data to CSV for backup/restore
-- [ ] **Database Migrations**: Add Alembic for proper schema versioning and migrations
 - [ ] **Custom Template Variables**: Allow users to define custom CSV fields for template placeholders
-- [ ] **Frontend usage**: block all actions when sending emails
+- [ ] **Frontend usage**: Block all actions when sending emails
 
 ### 🔮 Future Enhancements
-- [ ] **AI-Generated Emails**: Generate personalized emails based on company data (requires OpenAI API or local LLM)
+- [ ] **AI-Generated Emails**: Generate personalized emails based on company data
 - [ ] **Email Scheduling**: Schedule emails to be sent at specific times
 - [ ] **Email Templates Library**: Pre-built templates for different use cases
 - [ ] **Analytics Dashboard**: Advanced statistics and email performance metrics
 - [ ] **Bulk Operations**: Bulk delete, update, or tag recipients
 - [ ] **Email Attachments**: Support for multiple attachments beyond resume
 - [ ] **Multi-language Support**: Support for different languages and salutations
-- [ ] **API Authentication**: Add proper authentication/authorization for API endpoints
-- [ ] **Webhook Support**: Webhooks for email events (sent, failed, etc.)
-- [ ] **Email Bounce Handling**: Detect and handle bounced emails
 
 ### 🏗️ Technical Improvements
-- [ ] **Code Refactoring**: Further modularization and separation of concerns (see `REFACTORING_GUIDE.md`)
-- [ ] **Performance Optimization**: Optimize CSV parsing for large files
-- [ ] **Error Handling**: More comprehensive error handling and user feedback
-- [ ] **Logging**: Structured logging with proper log levels
-- [ ] **Configuration Management**: Environment-based configuration
-- [ ] **API Documentation**: Enhanced OpenAPI/Swagger documentation
-- [ ] **Frontend State Management**: Better state management in Streamlit app
-- [ ] **Database Optimization**: Index optimization and query performance tuning
+
+See `IMPROVEMENT_PLAN.md` for the prioritized technical backlog including:
+- Input validation and file upload limits
+- CORS restriction and rate limiting
+- Health check and metrics endpoints
+- Integration tests
+- Pre-commit hooks and type checking

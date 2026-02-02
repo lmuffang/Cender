@@ -12,38 +12,24 @@ from exceptions import (
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+# Map exception types to HTTP status codes
+EXCEPTION_STATUS_CODES: dict[type[Exception], int] = {
+    UserNotFoundError: 404,
+    RecipientNotFoundError: 404,
+    TemplateNotFoundError: 404,
+    ValidationError: 409,
+    GmailAuthError: 400,
+    InvalidCredentialsError: 400,
+    CSVParseError: 400,
+    ValueError: 400,
+}
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register all global exception handlers on the FastAPI app."""
 
-    @app.exception_handler(UserNotFoundError)
-    async def user_not_found_handler(request: Request, exc: UserNotFoundError):
-        return JSONResponse(status_code=404, content={"detail": str(exc)})
+    for exc_class, status_code in EXCEPTION_STATUS_CODES.items():
 
-    @app.exception_handler(RecipientNotFoundError)
-    async def recipient_not_found_handler(request: Request, exc: RecipientNotFoundError):
-        return JSONResponse(status_code=404, content={"detail": str(exc)})
-
-    @app.exception_handler(TemplateNotFoundError)
-    async def template_not_found_handler(request: Request, exc: TemplateNotFoundError):
-        return JSONResponse(status_code=404, content={"detail": str(exc)})
-
-    @app.exception_handler(ValidationError)
-    async def validation_error_handler(request: Request, exc: ValidationError):
-        return JSONResponse(status_code=409, content={"detail": str(exc)})
-
-    @app.exception_handler(GmailAuthError)
-    async def gmail_auth_error_handler(request: Request, exc: GmailAuthError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
-
-    @app.exception_handler(InvalidCredentialsError)
-    async def invalid_credentials_handler(request: Request, exc: InvalidCredentialsError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
-
-    @app.exception_handler(CSVParseError)
-    async def csv_parse_error_handler(request: Request, exc: CSVParseError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
-
-    @app.exception_handler(ValueError)
-    async def value_error_handler(request: Request, exc: ValueError):
-        return JSONResponse(status_code=400, content={"detail": str(exc)})
+        @app.exception_handler(exc_class)
+        async def handler(request: Request, exc: Exception, status_code: int = status_code):
+            return JSONResponse(status_code=status_code, content={"detail": str(exc)})

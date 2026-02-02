@@ -12,6 +12,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from utils.logger import logger
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
@@ -220,7 +221,7 @@ def send_email(service, message: dict, recipient: str):
     """Send email using Gmail API"""
     try:
         service.users().messages().send(userId="me", body=message).execute()
-        print(f"Email sent to {recipient}")
+        logger.info(f"Email sent to {recipient}")
     except HttpError as error:
-        print(f"Failed to send email to {recipient}: {error}")
+        logger.error(f"Failed to send email to {recipient}: {error}")
         raise error

@@ -38,14 +38,20 @@ class TemplateService:
             user_id: User ID
 
         Returns:
-            Dictionary with template content
+            Dictionary with template data (id, content, subject, timestamps if exists)
         """
         # Verify user exists
         self.user_service.get_by_id(user_id)
 
         template = self.db.query(Template).filter(Template.user_id == user_id).first()
         if template:
-            return {"content": template.content, "subject": template.subject}
+            return {
+                "id": template.id,
+                "content": template.content,
+                "subject": template.subject,
+                "created_at": template.created_at,
+                "updated_at": template.updated_at,
+            }
 
         # Default template
         default = (
@@ -55,7 +61,7 @@ class TemplateService:
             "Cordialement,\n"
             "Votre Nom"
         )
-        return {"content": default, "subject": "Candidature spontanée"}
+        return {"id": None, "content": default, "subject": "Candidature spontanée"}
 
     def create_or_update(self, user_id: int, content: str, subject: str) -> Template:
         """

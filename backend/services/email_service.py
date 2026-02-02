@@ -10,10 +10,9 @@ from database import EmailLog, EmailStatus, Recipient
 from exceptions import InvalidCredentialsError, TemplateNotFoundError, UserNotFoundError
 from gmail_service import authenticate_gmail, create_message, send_email
 from sqlalchemy.orm import Session
-from utils.gender_detector import guess_salutation
+from utils.gender_detector import build_salutation
 from utils.logger import logger
 
-from services.recipient_service import RecipientService
 from services.template_service import TemplateService
 from services.user_service import UserService
 
@@ -25,7 +24,6 @@ class EmailService:
         self.db = db
         self.user_service = UserService(db)
         self.template_service = TemplateService(db)
-        self.recipient_service = RecipientService(db)
 
     def send_emails_stream(
         self,
@@ -138,14 +136,7 @@ class EmailService:
 
             try:
                 # Generate salutation
-                first_name = recipient.first_name or ""
-                last_name = recipient.last_name or ""
-                salutation_text = guess_salutation(first_name)
-                if last_name:
-                    salutation = f"{salutation_text} {last_name}".strip()
-                else:
-                    salutation = salutation_text
-
+                salutation = build_salutation(recipient.first_name, recipient.last_name)
                 company = recipient.company or ""
 
                 # Create message
