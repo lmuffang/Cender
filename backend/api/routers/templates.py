@@ -2,7 +2,6 @@
 
 import datetime
 
-from exceptions import TemplateNotFoundError
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -18,20 +17,26 @@ async def get_template(user_id: int, db: Session = Depends(get_db)):
     template_service = get_template_service(db)
     template_data = template_service.get_or_default(user_id)
 
-    # Try to get actual template from DB
-    try:
-        template = template_service.get(user_id)
-        return template
-    except TemplateNotFoundError:
-        # Return default template info (not saved in DB)
+    # If template exists in DB, return it directly
+    if template_data.get("id"):
         return TemplateResponse(
-            id=0,
+            id=template_data["id"],
             user_id=user_id,
             content=template_data["content"],
             subject=template_data["subject"],
-            created_at=datetime.datetime.now(datetime.timezone.utc),
-            updated_at=datetime.datetime.now(datetime.timezone.utc),
+            created_at=template_data["created_at"],
+            updated_at=template_data["updated_at"],
         )
+
+    # Return default template info (not saved in DB)
+    return TemplateResponse(
+        id=0,
+        user_id=user_id,
+        content=template_data["content"],
+        subject=template_data["subject"],
+        created_at=datetime.datetime.now(datetime.timezone.utc),
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
+    )
 
 
 @router.post("/template", response_model=TemplateResponse)

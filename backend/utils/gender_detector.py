@@ -39,3 +39,20 @@ def guess_salutation(first_name: str | None) -> str:
         return "Madame"
 
     return "Monsieur"
+
+
+def build_salutation(first_name: str | None, last_name: str | None) -> str:
+    """
+    Build full salutation from first and last name.
+
+    Args:
+        first_name: First name of the recipient
+        last_name: Last name of the recipient
+
+    Returns:
+        Full salutation string (e.g., "Monsieur Dupont" or "Madame")
+    """
+    salutation_text = guess_salutation(first_name)
+    if last_name:
+        return f"{salutation_text} {last_name}".strip()
+    return salutation_text

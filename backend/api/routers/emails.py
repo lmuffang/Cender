@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from gmail_service import safe_format_template
 from sqlalchemy.orm import Session
-from utils.gender_detector import guess_salutation
+from utils.gender_detector import build_salutation
 
 from api.dependencies import (
     get_db,
@@ -45,14 +45,7 @@ async def preview_email(
     template = template_service.get(user_id)
 
     # Generate preview
-    first_name = recipient.first_name or ""
-    last_name = recipient.last_name or ""
-    salutation_text = guess_salutation(first_name)
-    if last_name:
-        salutation = f"{salutation_text} {last_name}".strip()
-    else:
-        salutation = salutation_text
-
+    salutation = build_salutation(recipient.first_name, recipient.last_name)
     company = recipient.company or ""
     body = safe_format_template(
         template.content, salutation=salutation, company=company, company_name=company

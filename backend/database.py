@@ -1,8 +1,13 @@
 import enum
-import functools
 import os
 
 from datetime import datetime, timezone
+
+
+def utc_now() -> datetime:
+    """Return current UTC datetime."""
+    return datetime.now(timezone.utc)
+
 
 from sqlalchemy import (
     Column,
@@ -65,7 +70,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True, nullable=False)
     email: Mapped[str] = mapped_column(unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
 
     recipients: Mapped[list["Recipient"]] = relationship(
         secondary=user_recipients,
@@ -101,7 +106,7 @@ class EmailLog(Base):
         nullable=False,
     )
 
-    sent_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    sent_at: Mapped[datetime] = mapped_column(default=utc_now)
 
     error_message: Mapped[str | None] = mapped_column(Text)
 
@@ -127,13 +132,13 @@ class Template(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=functools.partial(datetime.now, timezone.utc),
+        default=utc_now,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=functools.partial(datetime.now, timezone.utc),
-        onupdate=functools.partial(datetime.now, timezone.utc),
+        default=utc_now,
+        onupdate=utc_now,
     )
 
     user: Mapped["User"] = relationship(back_populates="template")
@@ -149,7 +154,7 @@ class Recipient(Base):
     salutation: Mapped[str | None]
     company: Mapped[str | None]
 
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
 
     users: Mapped[list["User"]] = relationship(
         secondary=user_recipients,
